@@ -127,6 +127,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .pill-bucket{display:inline-block;font-size:9px;border-radius:999px;padding:3px 8px;background:var(--bg2);border:0.5px solid var(--border);text-transform:uppercase;letter-spacing:.06em;color:var(--text2);margin-bottom:6px;}
 .lane-row{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:8px;}
 .lane-row .ft{padding:10px 6px;font-size:12px;}
+.ctrl-meter{background:#fff;border:0.5px solid var(--border);border-radius:10px;padding:10px 10px 8px;margin-bottom:8px;}
+.ctrl-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;}
+.ctrl-title{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text2);}
+.ctrl-state{font-size:11px;font-weight:700;color:var(--text);}
+.ctrl-track{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-bottom:6px;}
+.ctrl-seg{height:8px;border-radius:999px;background:var(--border);}
+.ctrl-seg.on{background:#185FA5;}
+.ctrl-seg.hot{background:#0f6e56;}
+.ctrl-txt{font-size:10px;line-height:1.45;color:var(--text2);}
 .ctrl-note{background:var(--blue-bg);border:0.5px solid #b5d4f4;border-radius:10px;padding:9px 10px;font-size:11px;color:#0c447c;line-height:1.45;margin-bottom:8px;}
 .diff-badge{display:inline-block;font-size:10px;text-transform:uppercase;letter-spacing:.08em;padding:4px 8px;border-radius:999px;background:var(--bg2);border:0.5px solid var(--border);color:var(--text2);margin-top:8px;}
 
@@ -158,10 +167,10 @@ const SC=[
 
 ];
 SC.push(
-  {id:'gully_bandra',match:'Gully Match — Bandra Reclamation',bt:'Khar Kings',bwt:'Bandra Blasters',bc:'#A04E1A',wc:'#6E3E1D',bowl:'harshit',need:12,wkts:3,order:['rohit','iyer_b','hardik','tail_b'],bucket:'gully'},
-  {id:'gully_indore',match:'Gully Match — Indore Tennis Ball Night',bt:'Palasia Panthers',bwt:'Rajwada Rockets',bc:'#8C4B20',wc:'#A85D23',bowl:'bhuvi',need:10,wkts:2,order:['kohli','sky','stoinis','tail_b'],bucket:'gully'},
-  {id:'gully_delhi',match:'Gully Match — Rohini Block Cup',bt:'Rohini Riders',bwt:'Pitampura XI',bc:'#905226',wc:'#6A3718',bowl:'joginder',need:14,wkts:4,order:['maxwell_b','iyer_b','faf_b','tail_b'],bucket:'gully'},
-  {id:'gully_pune',match:'Gully Match — Wakad Box Cricket',bt:'Wakad Warriors',bwt:'Baner Bulls',bc:'#9A5526',wc:'#70401F',bowl:'jadeja_bwl',need:11,wkts:3,order:['gill_b','miller','hardik','tail_b'],bucket:'gully'}
+  {id:'gully_bandra',match:'Gully Match — Bandra Reclamation',bt:'Khar Kings',bwt:'Bandra Blasters',bc:'#A04E1A',wc:'#6E3E1D',bowl:'abhishek_bwl',need:12,wkts:3,order:['sagar','viraj','unni','pritam'],bucket:'gully'},
+  {id:'gully_indore',match:'Gully Match — Indore Tennis Ball Night',bt:'Palasia Panthers',bwt:'Rajwada Rockets',bc:'#8C4B20',wc:'#A85D23',bowl:'kavar_bwl',need:10,wkts:2,order:['abhishek','shreeju','tejas','manav'],bucket:'gully'},
+  {id:'gully_delhi',match:'Gully Match — Rohini Block Cup',bt:'Rohini Riders',bwt:'Pitampura XI',bc:'#905226',wc:'#6A3718',bowl:'sagar_bwl',need:14,wkts:4,order:['viraj','pritam','aniket','unni'],bucket:'gully'},
+  {id:'gully_pune',match:'Gully Match — Wakad Box Cricket',bt:'Wakad Warriors',bwt:'Baner Bulls',bc:'#9A5526',wc:'#70401F',bowl:'shreeju_bwl',need:11,wkts:3,order:['kavar','sagar','abhishek','tejas'],bucket:'gully'}
 );
 
 const DIFF={
@@ -207,7 +216,17 @@ const BAT={
   klaasen:    {n:'H. Klaasen',      s:'Klaasen',   tp:'power',      tl:'Death Specialist',c:'high',  tr:'Elite death-over batter. Brutal.'},
   jadeja_bat: {n:'Ravindra Jadeja', s:'Jadeja',    tp:'finisher',   tl:'Sir Jadeja',      c:'medium',tr:'Unorthodox. Pulls off the unexpected.'},
   narine_bat: {n:'Sunil Narine',    s:'Narine',    tp:'power',      tl:'Batting Spinner', c:'medium',tr:'Unconventional hitter. Hard to bowl to.'},
-  misbah:     {n:'Misbah-ul-Haq',   s:'Misbah',    tp:'accumulator',tl:'Anchor',          c:'medium',tr:'Ice-cool. But needs to attack now.'}
+  misbah:     {n:'Misbah-ul-Haq',   s:'Misbah',    tp:'accumulator',tl:'Anchor',          c:'medium',tr:'Ice-cool. But needs to attack now.'},
+  sagar:      {n:'Sagar',           s:'Sagar',     tp:'accumulator',tl:'Street Anchor',   c:'medium',tr:'Plays late and knows the gaps.'},
+  abhishek:   {n:'Abhishek',        s:'Abhishek',  tp:'power',      tl:'Box-Cricket Hitter',c:'medium',tr:'Likes taking the short side on.'},
+  viraj:      {n:'Viraj',           s:'Viraj',     tp:'power',      tl:'Side-Street Opener',c:'high', tr:'Fast hands. Loves width.'},
+  unni:       {n:'Unni',            s:'Unni',      tp:'defensive',  tl:'Touch Player',    c:'medium',tr:'Busy batter who keeps the board moving.'},
+  kavar:      {n:'Kavar',           s:'Kavar',     tp:'finisher',   tl:'Night-Match Finisher',c:'medium',tr:'Strong through the line under lights.'},
+  pritam:     {n:'Pritam',          s:'Pritam',    tp:'accumulator',tl:'Gully Captain',   c:'high',  tr:'Reads the bowler well and picks his moments.'},
+  shreeju:    {n:'Shreeju',         s:'Shreeju',   tp:'power',      tl:'Tennis-Ball Enforcer',c:'medium',tr:'Strong wrists and loves pace on the ball.'},
+  aniket:     {n:'Aniket',          s:'Aniket',    tp:'accumulator',tl:'Punch Hitter',    c:'medium',tr:'Works singles and waits for errors.'},
+  manav:      {n:'Manav',           s:'Manav',     tp:'finisher',   tl:'Death-Overs Hitter',c:'medium',tr:'Backs himself when the field spreads.'},
+  tejas:      {n:'Tejas',           s:'Tejas',     tp:'power',      tl:'Tape-Ball Dasher',c:'low',    tr:'All or nothing, but dangerous.'}
 };
 
 // ===== BOWLERS =====
@@ -221,22 +240,46 @@ const BWL={
   // ─ new ─
   stokes_bwl: {n:'Ben Stokes',       s:'Stokes',    tp:'pacer',tl:'All-Rounder',     c:'medium',tr:'Can bowl at pace. Very unpredictable.'},
   malinga:    {n:'Lasith Malinga',   s:'Malinga',   tp:'death',tl:'Slinga Malinga',  c:'high',  tr:'Round-arm sling. Specialist yorker.'},
-  rashid:     {n:'Rashid Khan',      s:'Rashid',    tp:'death',tl:'Afghan Wizard',   c:'high',  tr:'Mystery spinner. Impossible to read.'},
+  rashid:     {n:'Rashid Khan',      s:'Rashid',    tp:'spinner',tl:'Afghan Wizard',   c:'high',  tr:'Mystery spinner. Impossible to read.'},
   bhuvi:      {n:'Bhuvneshwar Kumar',s:'Bhuvi',     tp:'death',tl:'Swing King',      c:'medium',tr:'Both-way swing. Excellent under pressure.'},
   joginder:   {n:'Joginder Sharma',  s:'Joginder',  tp:'pacer',tl:'Pacer',           c:'low',   tr:'Nerves of steel — or will pressure get him?'},
-  jadeja_bwl: {n:'Ravindra Jadeja',  s:'Jadeja',    tp:'pacer',tl:'Bowling All-Rounder',c:'medium',tr:'Tight lines. Very hard to get away.'},
-  ashwin:     {n:'R. Ashwin',        s:'Ashwin',    tp:'pacer',tl:'Off-Spinner',     c:'medium',tr:'Shrewd. Has all the variations.'}
+  jadeja_bwl: {n:'Ravindra Jadeja',  s:'Jadeja',    tp:'spinner',tl:'Left-Arm Spinner',c:'medium',tr:'Tight lines. Very hard to get away.'},
+  ashwin:     {n:'R. Ashwin',        s:'Ashwin',    tp:'spinner',tl:'Off-Spinner',     c:'medium',tr:'Shrewd. Has all the variations.'},
+  sagar_bwl:  {n:'Sagar',            s:'Sagar',     tp:'pacer',tl:'Tennis-Ball Seamer',c:'medium',tr:'Skids it on and bangs the deck.'},
+  abhishek_bwl:{n:'Abhishek',        s:'Abhishek',  tp:'pacer',tl:'Side-Arm Quick',    c:'medium',tr:'Hits the body and changes pace.'},
+  viraj_bwl:  {n:'Viraj',            s:'Viraj',     tp:'spinner',tl:'Street Spinner',   c:'medium',tr:'Drags you across with sharp turn.'},
+  unni_bwl:   {n:'Unni',             s:'Unni',      tp:'spinner',tl:'Carrom Spinner',   c:'medium',tr:'Keeps it flat and sneaks it through.'},
+  kavar_bwl:  {n:'Kavar',            s:'Kavar',     tp:'pacer',tl:'Tape-Ball Swing',    c:'high',  tr:'Shapes it late with the new tape.'},
+  pritam_bwl: {n:'Pritam',           s:'Pritam',    tp:'spinner',tl:'Loop Bowler',      c:'medium',tr:'Tempts batters to hit against the spin.'},
+  shreeju_bwl:{n:'Shreeju',          s:'Shreeju',   tp:'pacer',tl:'Night-Match Quick',  c:'medium',tr:'Fast, straight and awkward to line up.'}
 };
 
 // ===== DELIVERIES =====
 const DELS=[
-  {id:'inswing', n:'IN-SWINGER', h:'Shapes back into the pads — leg side is safer unless you commit hard.', icon:'↙', py:136, col:'#BA7517'},
-  {id:'outswing',n:'OUT-SWINGER',h:'Moves away outside off — off side is on if you reach it well.', icon:'↘', py:132, col:'#185FA5'},
-  {id:'offspin', n:'OFF-SPIN',   h:'Turns into the right-hander — work with the spin or smother it.', icon:'⟲', py:138, col:'#0F6E56'},
-  {id:'legspin', n:'LEG-SPIN',   h:'Big turn away — against the spin is risky.', icon:'⟳', py:132, col:'#E24B4A'},
-  {id:'chinaman',n:'CHINAMAN',   h:'Left-arm wrist spin turning in — tempting to hit against the spin.', icon:'◔', py:136, col:'#7A4FB3'},
-  {id:'bouncer', n:'BOUNCER',    h:'Climbs at the body — pick the pull or sway and defend.', icon:'⬆', py:112, col:'#1D9E75'}
+  {id:'inswing', n:'IN-SWINGER', h:'Shapes back into the pads.', icon:'↙', py:136, col:'#BA7517'},
+  {id:'outswing',n:'OUT-SWINGER',h:'Moves away outside off.', icon:'↘', py:132, col:'#185FA5'},
+  {id:'offspin', n:'OFF-SPIN',   h:'Turns in and hurries the bat.', icon:'⟲', py:138, col:'#0F6E56'},
+  {id:'legspin', n:'LEG-SPIN',   h:'Turns away with extra bite.', icon:'⟳', py:132, col:'#E24B4A'},
+  {id:'chinaman',n:'CHINAMAN',   h:'Left-arm wrist spin turning in.', icon:'◔', py:136, col:'#7A4FB3'},
+  {id:'bouncer', n:'BOUNCER',    h:'Climbs sharply at the body.', icon:'⬆', py:112, col:'#1D9E75'}
 ];
+const DEL_BY_ID=Object.fromEntries(DELS.map(d=>[d.id,d]));
+function batDeliveryPool(bowler){
+  const id=bowler?.s ? Object.keys(BWL).find(k=>BWL[k].n===bowler.n) : null;
+  const tp=bowler?.tp||'pacer';
+  if(['ashwin','unni_bwl'].includes(id)) return ['offspin'];
+  if(['jadeja_bwl','pritam_bwl'].includes(id)) return ['offspin'];
+  if(['rashid','viraj_bwl'].includes(id)) return ['legspin'];
+  if(tp==='spinner') return ['offspin','legspin'];
+  if(['boult','bhuvi','kavar_bwl'].includes(id)) return ['inswing','outswing'];
+  if(['pathirana','malinga'].includes(id)) return ['inswing','bouncer'];
+  return ['inswing','outswing','bouncer'];
+}
+function pickBatDelivery(){
+  const pool=batDeliveryPool(G.bowl);
+  const did=pool[Math.floor(Math.random()*pool.length)]||'inswing';
+  return DEL_BY_ID[did]||DELS[0];
+}
 
 // ===== TIMING CONFIGS (bat) — speed=ms per sweep =====
 const SHOT_CFG={
@@ -390,16 +433,16 @@ function bl(r){return r==='W'?'W':r===0?'·':r;}
 function nc(n,b){const p=b>0?n/b:99;return p>6?'#E24B4A':p>3.5?'#BA7517':'#1D9E75';}
 function cdots(lvl){const f=lvl==='high'?3:lvl==='medium'?2:1;return`<div class="cdots">${Array.from({length:3},(_,i)=>`<div class="cd ${i<f?'cd-on':'cd-off'}"></div>`).join('')}<span class="cd-l">${lvl==='high'?'HIGH':lvl==='medium'?'MED':'LOW'}</span></div>`;}
 
-function topbarH(activeGame=false){
+function topbarH(activeGame=false,showMenu=true){
   return`<div class="app-top">
-    <button class="icon-btn" onclick="openMenu()" aria-label="Menu">☰</button>
+    ${showMenu?`<button class="icon-btn" onclick="openMenu()" aria-label="Menu">🏏</button>`:`<div style="width:38px;height:38px"></div>`}
     <div class="app-brand">
       <div class="app-kicker">Tactical cricket</div>
       <div class="app-name">Last Over</div>
     </div>
     <div class="top-actions">
-      <button class="icon-btn" onclick="goHome()" aria-label="Home">⌂</button>
-      ${activeGame?`<button class="icon-btn" onclick="pauseGame()" aria-label="Pause">⏸</button>`:''}
+      <button class="icon-btn" onclick="goHome()" aria-label="Home">🏠</button>
+      ${activeGame?`<button class="icon-btn" onclick="pauseGame()" aria-label="Pause">⏸️</button>`:''}
     </div>
   </div>`;
 }
@@ -506,7 +549,14 @@ function areaIcon(a){
 function controlHintH(){
   const c=G?.control||0;
   const msg=c>=2?'Grounded play has you set. Lofted shots are now a little safer.':c===1?'You are getting set. Another grounded/defensive ball steadies the next big swing.':'Grounded and defensive shots build control. Smash too often and the risk climbs fast.';
-  return `<div class="ctrl-note">🧠 ${msg}</div>`;
+  return `<div class="ctrl-note">🧠 ${c>=2?'Set to attack':c===1?'Getting set':'Build control'}</div>`;
+}
+function controlMeterH(){
+  const c=G?.control||0;
+  const segs=Array.from({length:4},(_,i)=>`<div class="ctrl-seg ${i<c?'on':''} ${c>=3&&i<c?'hot':''}"></div>`).join('');
+  const state=c>=3?'Set batter':c===2?'In control':c===1?'Getting set':'Not set';
+  const tip=c>=3?'Attack on now':c>=1?'Base building':'Build control';
+  return `<div class="ctrl-meter"><div class="ctrl-head"><div class="ctrl-title">Control</div><div class="ctrl-state">${state}</div></div><div class="ctrl-track">${segs}</div><div class="ctrl-txt">${tip}</div></div>`;
 }
 function getPhaseSmashCount(){
   return G.ball>=4?(G.smashLate||0):(G.smashEarly||0);
@@ -930,11 +980,11 @@ function showModeSelect(){
     <div style="font-size:11px;color:var(--text2)">${daily.mode==='bat'?'🏏 Bat':'🎯 Bowl'} · ${daily.sc.bt} vs ${daily.sc.bwt}</div>
     ${done?`<div style="font-size:12px;margin-top:6px;font-weight:600;color:${dres==='W'?'#0f6e56':'#a32d2d'}">${dres==='W'?'✓ Won today':'✗ Lost today'} · Come back tomorrow!</div>`:'<div style="font-size:11px;color:var(--text2);margin-top:5px">Same scenario for everyone today →</div>'}
   </div>`;
-  $('g').innerHTML=`${topbarH(false)}<div style="text-align:center;padding:10px 0 6px"><div style="font-size:10px;text-transform:uppercase;letter-spacing:.14em;color:#8a8a85;margin-bottom:5px">Last Over</div><div style="font-size:22px;font-weight:700">One over. Everything on the line.</div><div style="font-size:13px;color:#5c5c58;margin-top:4px">${SC.length} scenarios across IPL, internationals and gully cricket</div></div>
+  $('g').innerHTML=`${topbarH(false,false)}<div style="text-align:center;padding:10px 0 6px"><div style="font-size:10px;text-transform:uppercase;letter-spacing:.14em;color:#8a8a85;margin-bottom:5px">Last Over</div><div style="font-size:22px;font-weight:700">One over. Everything on the line.</div><div style="font-size:13px;color:#5c5c58;margin-top:4px">${SC.length} scenarios across IPL, internationals and gully cricket</div></div>
   ${statsH}${dailyH}
-  <div class="mgrid"><div class="mc" onclick="showDifficultySelect('bat')"><div class="mc-i">🏏</div><div class="mc-n">Quick Bat</div><div class="mc-d">Read the delivery. Time your shot. Chase the target.</div></div><div class="mc" onclick="showDifficultySelect('bowl')"><div class="mc-i">🎯</div><div class="mc-n">Quick Bowl</div><div class="mc-d">Set your field. Time your delivery. Defend the total.</div></div></div>
-  <button class="btn" onclick="showScenarioBuckets()">Select scenario</button>
-  <button class="btn" onclick="showTrophies()">Trophies cabinet</button>`;
+  <div class="mgrid"><div class="mc" onclick="showDifficultySelect('bat')"><div class="mc-i">🏏</div><div class="mc-n">Quick Bat</div><div class="mc-d">Read the delivery. Time your shot. Chase the target.</div></div><div class="mc" onclick="showDifficultySelect('bowl')"><div class="mc-i">🥎</div><div class="mc-n">Quick Bowl</div><div class="mc-d">Set your field. Time your delivery. Defend the total.</div></div></div>
+  <button class="btn" onclick="showScenarioBuckets()">🏆 Scenario buckets</button>
+  <button class="btn" onclick="showTrophies()">🏅 Trophies cabinet</button>`;
 }
 
 function initDaily(){
@@ -962,9 +1012,9 @@ function startRound(mode,scenarioId=null,diff='classic',isDaily=false){
 function showScenarioBuckets(){
   G.screen='scenario_buckets';
   const buckets=[
-    {id:'ipl',title:'IPL',sub:'Franchise pressure, packed grounds, death-over specialists.',icon:'🏟️'},
-    {id:'international',title:'Internationals',sub:'World Cup and international finishes with elite bowling attacks.',icon:'🌍'},
-    {id:'gully',title:'Gully Match',sub:'Local Indian playground pressure. Dusty outfield, tennis-ball energy.',icon:'🪵'}
+    {id:'ipl',title:'IPL',sub:'Franchise pressure, packed grounds, death-over specialists.',icon:'🏆'},
+    {id:'international',title:'Internationals',sub:'World Cup and international finishes with elite bowling attacks.',icon:'🌐'},
+    {id:'gully',title:'Gully Match',sub:'Local Indian playground pressure.',icon:'🧱'}
   ].map(b=>`<div class="choice-card" onclick="showScenarioSelect('${b.id}')"><div class="choice-kicker">${b.icon} ${getBucketScenarios(b.id).length} scenarios</div><div class="choice-title">${b.title}</div><div class="choice-sub">${b.sub}</div></div>`).join('');
   $('g').innerHTML=`${topbarH(false)}
     <div style="text-align:center;padding:4px 0 6px">
@@ -1017,7 +1067,7 @@ function showBall(){
 // ── BAT MODE ──
 function showBatBall(){
   G.screen='bat_select';
-  const del=(G.screen==='bat_select'&&G.curDel)?G.curDel:DELS[Math.floor(Math.random()*DELS.length)];
+  const del=(G.screen==='bat_select'&&G.curDel)?G.curDel:pickBatDelivery();
   G.curDel=del;
   G.selArea=null;
   const shots=[
@@ -1026,8 +1076,8 @@ function showBatBall(){
     {id:'defend',dir:'🛡 Defensive',n:'Defensive Shot',desc:'Watch it and survive — safest option', col:'#0F6E56'}
   ].map(s=>`<div class="shot" style="border-color:${s.col}" onclick="selectShot('${s.id}')"><div class="sd" style="color:${s.col}">${s.dir}</div><div class="sn2" style="color:${s.col}">${s.n}</div><div class="sdesc">${s.desc}</div></div>`).join('');
   $('g').innerHTML=`${topbarH(true)}${sbarH()}${trH()}<div class="del-banner" style="border-color:${del.col}"><div class="del-t" style="color:${del.col}">${del.icon} ${del.n}</div><div class="del-h">${del.h}</div></div>
-  ${controlHintH()}
-  <div class="field-row"><div class="t-bar-wrap"><div style="font-size:8px;color:#8a8a85;text-align:center;margin-bottom:3px">release</div><div style="height:250px;background:#eeedea;border-radius:14px;border:0.5px solid #d4d3cf;display:flex;align-items:center;justify-content:center;padding:8px"><div style="font-size:9px;color:#5c5c58;text-align:center;line-height:1.5">pre-pick<br>the shot</div></div></div><div class="field-col">${fw(del.id,del.py)}</div><div class="shot-info"><div style="font-size:9px;color:#8a8a85">control</div><div class="si-icon" style="font-size:14px">✋</div><div class="si-n">Tap lane</div></div></div>${cstripH()}<div style="font-size:11px;color:#5c5c58;margin-bottom:6px;text-align:center">Choose the shot now. After the ball is released, tap leg side, straight, or off side to play it.</div><div class="shots">${shots}</div>`;
+  ${controlMeterH()}${controlHintH()}
+  <div class="field-row"><div class="t-bar-wrap"><div style="font-size:8px;color:#8a8a85;text-align:center;margin-bottom:3px">release</div><div style="height:250px;background:#eeedea;border-radius:14px;border:0.5px solid #d4d3cf;display:flex;align-items:center;justify-content:center;padding:8px"><div style="font-size:9px;color:#5c5c58;text-align:center;line-height:1.35">pick<br>shot</div></div></div><div class="field-col">${fw(del.id,del.py)}</div><div class="shot-info"><div style="font-size:9px;color:#8a8a85">lane</div><div class="si-icon" style="font-size:14px">🎯</div><div class="si-n">Tap</div></div></div>${cstripH()}<div class="shots">${shots}</div>`;
   sb(150,97,0);requestAnimationFrame(()=>requestAnimationFrame(()=>sb(150,150,0.36)));
 }
 
@@ -1048,7 +1098,7 @@ function selectShot(sid){
     <div class="field-col">${fw(del.id,null)}${releaseCueH()}</div>
     <div class="shot-info"><div class="si-icon" style="color:${sh.col}">${sh.dir}</div><div class="si-n" style="color:${sh.col}">${sh.n}</div><div style="font-size:8px;color:#8a8a85;margin-top:4px">tap late</div></div>
   </div>
-  <div style="text-align:center;font-size:11px;color:#5c5c58;margin-bottom:8px">${sh.n} selected. Tap a lane at contact to choose direction. Grounded and defensive shots are the best way to get set.</div>
+  ${controlMeterH()}<div style="text-align:center;font-size:10px;color:#5c5c58;margin-bottom:8px">Tap lane at contact.</div>
   <div class="lane-row">${laneBtns}</div>`;
   startBatReleaseCue();
   startTiming();
