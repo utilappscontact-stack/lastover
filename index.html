@@ -449,9 +449,9 @@ SC.push(
 );
 
 const DIFF={
-  easy:{n:'Easy',shot:1.14,wkt:0.82,bowlWkt:1.12,bowlLeak:0.86,yorkers:2,smashPad:2},
-  classic:{n:'Classic',shot:1,wkt:1,bowlWkt:1,bowlLeak:1,yorkers:1,smashPad:0},
-  hard:{n:'Hard',shot:0.9,wkt:1.14,bowlWkt:0.9,bowlLeak:1.12,yorkers:0,smashPad:-2}
+  easy:{n:'Easy',shot:1.14,wkt:0.82,bowlWkt:1.12,bowlLeak:0.86,yorkers:3,smashPad:2},
+  classic:{n:'Classic',shot:1,wkt:1,bowlWkt:1,bowlLeak:1,yorkers:2,smashPad:0},
+  hard:{n:'Hard',shot:0.9,wkt:1.14,bowlWkt:0.9,bowlLeak:1.12,yorkers:1,smashPad:-2}
 };
 
 function getScenarioBucket(sc){
@@ -904,17 +904,25 @@ function getBatTrajectory(shot,area,did){
 function batComment(result,shot,area,did,q){
   const zone=areaLabel(area).toLowerCase();
   const dName=(DELS.find(d=>d.id===did)?.n||'delivery').toLowerCase();
+  const controlNow=G.control||0;
   if(result==='W'){
     if(shot==='smash') return `Mistimed loft to the ${zone} — taken in the deep!`;
     if(shot==='ground') return `Tried to pierce the ${zone}; fielder cuts it off and holds on!`;
     return `Beaten by the ${dName} — wicket!`;
   }
   if(result===0){
-    if(shot==='defend') return `Solidly watched and defended. No run.`;
+    if(shot==='defend') return `Solidly defended. Control building → ${controlNow}/3`;
     return (q==='bad'||q==='risky') ? `Wrong option to the ${zone}. Dot ball.` : `Can't quite beat the ring on the ${zone}.`;
   }
-  if(result===1) return `Worked into the ${zone} for a single.`;
-  if(result===2) return `Threaded into the ${zone} — they come back for two.`;
+  if(result===1){
+    if(shot==='defend') return `Solidly defended and nudged away. Control building → ${controlNow}/3`;
+    if(shot==='ground') return `Worked into the gap for 1. Control: ${controlNow}/3`;
+    return `Worked into the ${zone} for a single.`;
+  }
+  if(result===2){
+    if(shot==='ground') return `Worked into the gap for 2. Control: ${controlNow}/3`;
+    return `Threaded into the ${zone} — they come back for two.`;
+  }
   if(result===4){
     if(shot==='smash') return `Lofted inside-out to the ${zone} — FOUR!`;
     if(shot==='ground') return `Beautifully placed through the ${zone} — FOUR!`;
@@ -993,14 +1001,15 @@ function showTrophies(){
   <button class="btn" style="margin-top:14px" onclick="showModeSelect()">← Back to home</button>`;
 }
 // ===== FIELD SVG =====
-function fieldSVG(fkey,pitchDotY){
+function fieldSVG(fkey,pitchDotY,pitchCue=''){
   const pos=FP[fkey]||FP.full;
   const gully=G?.bucket==='gully';
   const outerFill=gully?'#3d1e08':'#0d2e18';
   const outerStroke=gully?'#2a1205':'#071a0e';
   const innerFill=gully?'#4a2510':'#0b2814';
-  const fs=pos.map(p=>`<circle cx="${p[0]}" cy="${p[1]}" r="5.5" fill="#ccccc0" stroke="#7a7a68" stroke-width="1.2" opacity=".92"/>`).join('');
+  const fs=pos.map(p=>`<circle cx="${p[0]}" cy="${p[1]}" r="3.5" fill="#ccccc0" stroke="#7a7a68" stroke-width="1.2" opacity=".92"/>`).join('');
   const pd=pitchDotY?`<circle cx="150" cy="${pitchDotY}" r="4.5" fill="#F0B429" stroke="#a07a00" stroke-width="1" opacity=".9"/>`:'';
+  const cue=(pitchDotY&&pitchCue)?`<text x="165" y="${pitchDotY}" font-size="9" fill="rgba(255,255,255,0.7)" text-anchor="middle" dominant-baseline="middle">${pitchCue}</text>`:'';
   return`<svg width="100%" viewBox="0 0 300 270" style="display:block;">
     <ellipse cx="150" cy="135" rx="136" ry="121" fill="${outerFill}" stroke="${outerStroke}" stroke-width="1.5"/>
     <ellipse cx="150" cy="135" rx="68" ry="60" fill="${innerFill}" stroke="${outerStroke}" stroke-width="1" stroke-dasharray="4,3" opacity=".6"/>
@@ -1014,37 +1023,108 @@ function fieldSVG(fkey,pitchDotY){
     <rect x="150" y="98"  width="2" height="6" rx=".5" fill="#7b4420"/>
     <rect x="153" y="98"  width="2" height="6" rx=".5" fill="#7b4420"/>
     ${fs}
-    <circle cx="165" cy="167" r="5.5" fill="#ccccc0" stroke="#555545" stroke-width="1.5" opacity=".92"/>
+    
     <circle cx="150" cy="150" r="7"   fill="#F0B429" stroke="#a07a00" stroke-width="1.5"/>
     <circle cx="150" cy="110" r="5.5" fill="#F0B429" stroke="#a07a00" stroke-width="1"   opacity=".7"/>
     ${pd}
+    ${cue}
   </svg>`;
 }
-function fw(fkey,pitchDotY){return`<div class="fwrap" id="fwrap">${fieldSVG(fkey,pitchDotY)}<div id="fball" style="left:50%;top:36%;"></div></div>`;}
+function fw(fkey,pitchDotY,pitchCue=''){return`<div class="fwrap" id="fwrap">${fieldSVG(fkey,pitchDotY,pitchCue)}<div id="fball" style="left:50%;top:36%;"></div></div>`;}
 function releaseCueH(){return`<div class="release-cue" id="releaseCue">BALL</div>`;}
 function clearReleaseCue(){if(releaseCueTimer){clearTimeout(releaseCueTimer);releaseCueTimer=null;}const rc=$('releaseCue');if(rc)rc.classList.remove('active');}
-function startBatReleaseCue(){clearReleaseCue();sb(150,97,0);releaseCueTimer=setTimeout(()=>{const rc=$('releaseCue');if(rc){void rc.offsetWidth;rc.classList.add('active');}sb(150,150,0.34);releaseCueTimer=null;},650);}
+function startBatReleaseCue(){
+  clearReleaseCue();
+  const del=G?.curDel;
+  const rc=$('releaseCue');
+  if(rc && del) rc.textContent=`${del.icon} ${del.n}`;
+  sb(150,97,0);
+  releaseCueTimer=setTimeout(()=>{
+    const cue=$('releaseCue');
+    if(cue){
+      void cue.offsetWidth;
+      cue.classList.add('active');
+    }
+    sb(150,150,0.34);
+    releaseCueTimer=null;
+  },650);
+}
 function launchConfetti(count=24){const wrap=document.createElement('div');wrap.className='confetti-wrap';const colors=['#1fc87a','#e84545','#f5a820','#3d8ef0','#f0b840','#c084fc','#f0f2f8'];for(let i=0;i<count;i++){const piece=document.createElement('div');piece.className='confetti-piece';piece.style.left=(Math.random()*100)+'vw';piece.style.background=colors[Math.floor(Math.random()*colors.length)];piece.style.setProperty('--dx',((Math.random()*180)-90)+'px');piece.style.setProperty('--rot',((Math.random()*720)-360)+'deg');piece.style.animationDelay=(Math.random()*0.18)+'s';piece.style.opacity=String(0.85+Math.random()*0.15);wrap.appendChild(piece);}document.body.appendChild(wrap);setTimeout(()=>wrap.remove(),1300);}
 function sb(cx,cy,t=0){const b=$('fball');if(!b)return;b.style.transition=t?`left ${t}s ease-out,top ${t}s ease-out`:'none';b.style.left=(cx/300*100)+'%';b.style.top=(cy/270*100)+'%';}
 function projectToBoundary(ep){const cx=150,cy=135,rx=136,ry=121;const dx=ep.x-cx,dy=ep.y-cy;if(!dx&&!dy)return{x:cx,y:14};const scale=1/Math.sqrt((dx*dx)/(rx*rx)+(dy*dy)/(ry*ry));return{x:Math.max(14,Math.min(286,cx+dx*scale)),y:Math.max(14,Math.min(256,cy+dy*scale))};}
-function resultEndpoint(tmap,result){const rk=String(result==='W'?'W':result);const base=tmap[rk]||tmap['0']||{x:150,y:120};return (result===4||result===6)?projectToBoundary(base):base;}
+function resolveAnimFieldKey(tKey){
+  if(typeof tKey==='string'){
+    if(['inswing','outswing','offspin','legspin','chinaman','bouncer'].includes(tKey)) return tKey;
+    if(['ya','fa','sa'].includes(tKey)) return G.fmode==='attack'?'attack':'defend';
+    if(FP[tKey]) return tKey;
+  }
+  return G.mode==='bowl' ? (G.fmode==='attack'?'attack':'defend') : (G.curDel?.id||'full');
+}
+function snapToNearestFielder(base,fkey){
+  const pos=FP[fkey]||FP.full;
+  if(!pos || !pos.length) return base;
+  let best=pos[0], bestD=Infinity;
+  for(const p of pos){
+    const dx=p[0]-base.x, dy=p[1]-base.y;
+    const d=(dx*dx)+(dy*dy);
+    if(d<bestD){best=p;bestD=d;}
+  }
+  return {x:best[0],y:best[1]};
+}
+function resultEndpoint(tmap,result,tKey){
+  const rk=String(result==='W'?'W':result);
+  const base=tmap[rk]||tmap['0']||{x:150,y:120};
+  if(result==='W') return snapToNearestFielder(base,resolveAnimFieldKey(tKey));
+  return (result===4||result===6)?projectToBoundary(base):base;
+}
+function getDelMidpoint(tKey){
+  const id=typeof tKey==='string'?tKey:null;
+  if(id==='inswing') return {x:128,y:138};
+  if(id==='outswing') return {x:172,y:138};
+  if(id==='offspin') return {x:135,y:140};
+  if(id==='legspin') return {x:168,y:140};
+  if(id==='chinaman') return {x:135,y:140};
+  if(id==='bouncer') return {x:150,y:118};
+  return {x:150,y:138};
+}
+function getPitchCue(id){
+  if(id==='inswing'||id==='offspin'||id==='chinaman') return '↙';
+  if(id==='outswing'||id==='legspin') return '↗';
+  if(id==='bouncer') return '↑';
+  return '';
+}
 function getScenarioIndex(id){return Math.max(0,SC.findIndex(s=>s.id===id));}
 function nextScenario(){const idx=getScenarioIndex(G.sc?.id);const next=SC[(idx+1)%SC.length];const mode=G.mode;const diff=G.diff||'classic';const order=[...next.order];G={mode,sc:next,bat:{...BAT[order[0]]},bowl:{...BWL[next.bowl]},need:next.need,wkts:next.wkts,ball:0,scored:0,fallen:0,res:[],batOrder:order,batIdx:0,won:false,selShot:null,selArea:null,selDel:null,tq:'ok',btq:'ok',fmode:'defend',curDel:null,budget:{yorker:yorkerBudgetForDiff(diff),fuller:6,short:2},isDaily:false,screen:'scenario',timing:{active:false,paused:false,isBowl:false},smashEarly:0,smashLate:0,diff:diff,bucket:getScenarioBucket(next)};showSc();}
 
 // ===== BALL ANIMATION =====
 function anim(tKey,result,cb){
   const tmap=(typeof tKey==='object'&&tKey)?tKey:(TR[tKey]||TR.ground);
-  const ep=resultEndpoint(tmap,result);
+  const ep=resultEndpoint(tmap,result,tKey);
   const b=$('fball');if(b){b.style.opacity='1';b.style.transition='none';}
+  const isBatDelivery=typeof tKey==='string' && ['inswing','outswing','offspin','legspin','chinaman','bouncer'].includes(tKey);
+  const endDur=result===6?0.78:result===4?0.65:0.45;
+  const midDur=0.18;
   sb(150,97,0);
   requestAnimationFrame(()=>requestAnimationFrame(()=>{
     sb(150,150,0.33);
     setTimeout(()=>{
-      sb(ep.x,ep.y,result===6?0.78:result===4?0.65:0.45);
-      if(result===6){setTimeout(()=>{const fb=$('fball');if(fb){fb.style.transition='opacity .35s';fb.style.opacity='0';}},350);}
-      const fw=$('fwrap');
-      if(fw){fw.style.outline=result===4||result===6?'3px solid #1fc87a':result==='W'?'3px solid #e84545':'';setTimeout(()=>{if(fw)fw.style.outline='';},700);}
-      setTimeout(cb,result===6?1100:result===4?950:700);
+      if(isBatDelivery){
+        const mid=getDelMidpoint(tKey);
+        sb(mid.x,mid.y,midDur);
+        setTimeout(()=>{
+          sb(ep.x,ep.y,endDur);
+          if(result===6){setTimeout(()=>{const fb=$('fball');if(fb){fb.style.transition='opacity .35s';fb.style.opacity='0';}},350);}
+          const fw=$('fwrap');
+          if(fw){fw.style.outline=result===4||result===6?'3px solid #1fc87a':result==='W'?'3px solid #e84545':'';setTimeout(()=>{if(fw)fw.style.outline='';},880);}
+          setTimeout(cb,Math.round(endDur*1000)+180+(result===6?320:result===4?300:250));
+        },180);
+      }else{
+        sb(ep.x,ep.y,endDur);
+        if(result===6){setTimeout(()=>{const fb=$('fball');if(fb){fb.style.transition='opacity .35s';fb.style.opacity='0';}},350);}
+        const fw=$('fwrap');
+        if(fw){fw.style.outline=result===4||result===6?'3px solid #1fc87a':result==='W'?'3px solid #e84545':'';setTimeout(()=>{if(fw)fw.style.outline='';},700);}
+        setTimeout(cb,result===6?1100:result===4?950:700);
+      }
     },360);
   }));
 }
@@ -1063,7 +1143,19 @@ function getBatOuts(sid,did,tq,area){
   else if(q==='good')m(x=>x.r==='W',0.72);
   if(tq==='perfect'){m(x=>x.r==='W',0.35);m(x=>x.r===4||x.r===6,1.9);}
   else if(tq==='good'){m(x=>x.r==='W',0.65);m(x=>x.r===4||x.r===6,1.35);}
-  else if(tq==='poor'){m(x=>x.r==='W',2.1);m(x=>x.r===4||x.r===6,0.38);m(x=>x.r===6,0.18);}
+  else if(tq==='poor'){
+    m(x=>x.r==='W',2.1);
+    if(sid === 'smash') {
+      o.forEach(x=>{if(x.r===6||x.r===4)x.w=0;});
+      m(x=>x.r===0,1.6);
+    } else {
+      m(x=>x.r===4||x.r===6,0.3);
+    }
+  }
+  else if(tq === 'ok') {
+    m(x=>x.r===6,0.7);
+    m(x=>x.r==='W',1.15);
+  }
   const bt=G.bat;
   if(bt.c==='low'){m(x=>x.r==='W',1.5);if(sid==='smash')m(x=>x.r===6,0.3);}
   else if(bt.c==='high'){m(x=>x.r==='W',0.65);m(x=>x.r===4||x.r===6,1.25);}
@@ -1088,7 +1180,9 @@ function getBatOuts(sid,did,tq,area){
   }else if(sid==='ground'){
     m(x=>x.r==='W',0.84);
     m(x=>x.r===1||x.r===2,1.18);
-    if(control>0)m(x=>x.r===4,1.08);
+    if(control >= 1) m(x=>x.r===4,1.08 + (control * 0.08));
+    if(control >= 2) m(x=>x.r==='W',0.78);
+    if(control >= 3) m(x=>x.r===4||x.r===2,1.22);
   }else if(sid==='defend'){
     m(x=>x.r==='W',0.72);
     m(x=>x.r===0||x.r===1,1.28);
@@ -1151,7 +1245,6 @@ function timeoutCurrentTiming(){
   }
 }
 function startTiming(){
-  clearReleaseCue();
   G.timing={active:true,paused:false,isBowl:false,startTs:Date.now(),progressMs:0,remainingMs:5000};
   if(rafId)cancelAnimationFrame(rafId);
   if(autoHitTimer)clearTimeout(autoHitTimer);
@@ -1395,6 +1488,23 @@ function showBatBall(){
     {id:'ground',icon:'➜',  n:'Grounded',  desc:'Balanced option',       col:'#60a5fa'},
     {id:'defend',icon:'🛡', n:'Defensive', desc:'Safest play',            col:'#34d399'}
   ].map(s=>`<div class="shot-pick"><button class="ft" style="border-color:${s.col};color:${s.col}" onclick="selectShot('${s.id}')">${s.icon} ${s.n}</button><div class="sub">${s.desc}</div></div>`).join('');
+  const smashCount=G.ball>=4?(G.smashLate||0):(G.smashEarly||0);
+  const smashWindow=getSmashWindow();
+  const smashLabel=smashCount===0
+    ? {icon:'🟢', text:'Fresh — full timing window', col:'#1fc87a'}
+    : smashCount===1
+    ? {icon:'🟡', text:'Tiring — tighter green zone', col:'#f5a820'}
+    : {icon:'🔴', text:'Reckless — narrow window', col:'#f87171'};
+  const controlDots=Array.from({length:3},(_,i)=>
+    `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${i < (G.control||0) ? '#3d8ef0' : '#252e48'};margin:0 2px"></span>`
+  ).join('');
+  const left=6-G.ball;
+  const rate=left>0?G.need/left:99;
+  const suggestion=rate>6
+    ? {shot:'Smash', why:'Need big hits', col:'#f87171'}
+    : rate>3.5
+    ? {shot:'Ground', why:'Build with boundaries', col:'#60a5fa'}
+    : {shot:'Defend', why:'Control and rotate', col:'#34d399'};
   $('g').innerHTML=`${topbarH(true)}${sbarH()}${trH()}
   <div class="field-row">
     <div class="t-bar-wrap">
@@ -1403,13 +1513,23 @@ function showBatBall(){
         <div style="font-size:9px;color:#4a5270;text-align:center;line-height:1.5">pick<br>shot</div>
       </div>
     </div>
-    <div class="field-col">${fw(del.id,del.py)}</div>
+    <div class="field-col">${fw(del.id,null)}</div>
     <div class="shot-info">
       <div style="font-size:9px;color:#4a5270;text-align:center;line-height:1.4;padding-top:60px">delivery<br>incoming</div>
     </div>
   </div>
   ${playerStripH()}
+  ${G.selShot===null?`<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#161c28;border:1px solid #252e48;border-radius:10px;margin-bottom:10px">
+    <span style="font-size:16px">${smashLabel.icon}</span>
+    <div>
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#4a5270">Smash form</div>
+      <div style="font-size:12px;font-weight:700;color:${smashLabel.col}">${smashLabel.text}</div>
+      <div style="font-size:11px;color:#8a93ae;margin-top:2px">Control ${controlDots}</div>
+    </div>
+    <div style="margin-left:auto;font-size:11px;color:#4a5270">${smashWindow}% green</div>
+  </div>`:''}
   <div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#4a5270;text-align:center;margin-bottom:8px">Choose your shot</div>
+  <div style="text-align:center;font-size:11px;color:${suggestion.col};margin-bottom:8px;font-weight:600">Situation calls for: ${suggestion.shot} — ${suggestion.why}</div>
   <div class="shot-picks">${shots}</div>`;
   sb(150,97,0);requestAnimationFrame(()=>requestAnimationFrame(()=>sb(150,150,0.36)));
 }
@@ -1437,7 +1557,7 @@ function selectShot(sid){
       <div style="font-size:8px;color:#4a5270;text-align:center;margin-bottom:3px;text-transform:uppercase;letter-spacing:.05em">timing</div>
       ${timingBarH(sid,false)}
     </div>
-    <div class="field-col">${fw(del.id,null)}${releaseCueH()}</div>
+    <div class="field-col">${fw(del.id,del.py,getPitchCue(del.id))}${releaseCueH()}</div>
     <div class="shot-info">
       <div class="si-icon" style="color:${sh.col};padding-top:60px">${sh.dir}</div>
       <div class="si-n" style="color:${sh.col}">${sh.n}</div>
@@ -1462,6 +1582,7 @@ function proceedBat(fromTimeout=false){
   if(sid==='smash')registerSmashUse();
   const q=assessBatChoice(did,sid,area);
   const result=wt(getBatOuts(sid,did,G.tq,area));
+  updateBatControl(result);
   let comm=batComment(result,sid,area,did,q);
   if(fromTimeout) comm='Too late to choose a side. The bat comes down straight and the chance is gone.';
   const tTag=G.tq==='perfect'?`<span class="timing-tag" style="background:rgba(31,200,122,.16);color:#4ade80;border-color:rgba(31,200,122,.35)">🎯 Perfect!</span>`:G.tq==='good'?`<span class="timing-tag" style="background:rgba(61,142,240,.16);color:#93c5fd;border-color:rgba(61,142,240,.35)">✓ Good timing</span>`:G.tq==='poor'?`<span class="timing-tag" style="background:rgba(232,69,69,.16);color:#f08080;border-color:rgba(232,69,69,.35)">✗ Late / mistimed</span>`:'';
@@ -1502,7 +1623,7 @@ function showBowlBall(){
     </div>
   </div>
   ${cstripH()}
-  <div style="font-size:10px;color:#4a5270;margin-bottom:8px;text-align:center">${G.bat.n} · <span style="color:#8a93ae">${G.bat.tr}</span> · Yorkers: <span style="color:#f5a820;font-weight:700">${G.budget.yorker}</span> left</div>
+  <div style="font-size:10px;color:#4a5270;margin-bottom:8px;text-align:center">${G.bat.n} · <span style="color:#8a93ae">${G.bat.tr}</span> · ⬇ <span style="color:#f5a820;font-weight:700">${G.budget.yorker}</span> · → <span style="color:#8a93ae;font-weight:700">∞</span> · ⬆ <span style="color:#4ade80;font-weight:700">${G.budget.short}</span></div>
   <div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#4a5270;text-align:center;margin-bottom:8px">Select delivery</div>
   <div class="shots">${dbns}</div>`;
   sb(150,97,0);requestAnimationFrame(()=>requestAnimationFrame(()=>sb(150,150,0.36)));
@@ -1582,7 +1703,7 @@ function showRes(result,comm,sm,extra,isLast,tk){
     6:  {bg:'rgba(31,200,122,.18)', border:'#1fc87a', col:'#4ade80', label:'Maximum!'}
   }[result===0?0:result==='W'?'W':result]||{bg:'rgba(74,82,112,.12)',border:'#354060',col:'#8a93ae',label:''};
   const tmap=(typeof tk==='object'&&tk)?tk:(TR[tk]||TR.ground);
-  const ep=resultEndpoint(tmap,result);
+  const ep=resultEndpoint(tmap,result,tk);
   const fkey=G.mode==='bowl'?(G.fmode==='attack'?'attack':'defend'):(G.curDel?.id||'full');
   $('g').innerHTML=`${topbarH(true)}${sbarH()}${trH()}
   <div class="field-row">
