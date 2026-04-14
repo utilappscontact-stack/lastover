@@ -127,6 +127,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .pill-bucket{display:inline-block;font-size:9px;border-radius:999px;padding:3px 8px;background:var(--bg2);border:0.5px solid var(--border);text-transform:uppercase;letter-spacing:.06em;color:var(--text2);margin-bottom:6px;}
 .lane-row{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:8px;}
 .lane-row .ft{padding:10px 6px;font-size:12px;}
+.shot-picks{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px;}
+.shot-pick{text-align:center;}
+.shot-pick .ft{width:100%;padding:12px 6px;font-size:13px;border-width:1.5px;background:#fff;}
+.shot-pick .sub{font-size:9px;line-height:1.35;color:var(--text3);margin-top:5px;padding:0 4px;}
+.player-strip{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:8px;}
+.player-chip{background:var(--bg2);border:0.5px solid var(--border);border-radius:8px;padding:8px 10px;}
+.player-chip .k{font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:var(--text2);margin-bottom:2px;}
+.player-chip .v{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .ctrl-meter{background:#fff;border:0.5px solid var(--border);border-radius:10px;padding:10px 10px 8px;margin-bottom:8px;}
 .ctrl-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;}
 .ctrl-title{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text2);}
@@ -167,10 +175,10 @@ const SC=[
 
 ];
 SC.push(
-  {id:'gully_bandra',match:'Gully Match — Bandra Reclamation',bt:'Khar Kings',bwt:'Bandra Blasters',bc:'#A04E1A',wc:'#6E3E1D',bowl:'abhishek_bwl',need:12,wkts:3,order:['sagar','viraj','unni','pritam'],bucket:'gully'},
-  {id:'gully_indore',match:'Gully Match — Indore Tennis Ball Night',bt:'Palasia Panthers',bwt:'Rajwada Rockets',bc:'#8C4B20',wc:'#A85D23',bowl:'kavar_bwl',need:10,wkts:2,order:['abhishek','shreeju','tejas','manav'],bucket:'gully'},
-  {id:'gully_delhi',match:'Gully Match — Rohini Block Cup',bt:'Rohini Riders',bwt:'Pitampura XI',bc:'#905226',wc:'#6A3718',bowl:'sagar_bwl',need:14,wkts:4,order:['viraj','pritam','aniket','unni'],bucket:'gully'},
-  {id:'gully_pune',match:'Gully Match — Wakad Box Cricket',bt:'Wakad Warriors',bwt:'Baner Bulls',bc:'#9A5526',wc:'#70401F',bowl:'shreeju_bwl',need:11,wkts:3,order:['kavar','sagar','abhishek','tejas'],bucket:'gully'}
+  {id:'gully_kurla',match:'Gully Match — Kurla Monsoon Cup',bt:'Kurla Kings',bwt:'Santacruz Strikers',bc:'#A04E1A',wc:'#6E3E1D',bowl:'abhishek_bwl',need:12,wkts:3,order:['sagar','viraj','unni','pritam'],bucket:'gully'},
+  {id:'gully_kalina',match:'Gully Match — Kalina Tennis Ball Night',bt:'Kalina Knights',bwt:'Bhandup Blasters',bc:'#8C4B20',wc:'#A85D23',bowl:'kavar_bwl',need:10,wkts:2,order:['abhishek','shreeju','tejas','manav'],bucket:'gully'},
+  {id:'gully_santacruz',match:'Gully Match — Santacruz Station Cup',bt:'Santacruz Smashers',bwt:'Kalina Chargers',bc:'#905226',wc:'#6A3718',bowl:'sagar_bwl',need:14,wkts:4,order:['viraj','pritam','aniket','unni'],bucket:'gully'},
+  {id:'gully_bhandup',match:'Gully Match — Bhandup Box Cricket',bt:'Bhandup Bulls',bwt:'Kurla Warriors',bc:'#9A5526',wc:'#70401F',bowl:'shreeju_bwl',need:11,wkts:3,order:['kavar','sagar','abhishek','tejas'],bucket:'gully'}
 );
 
 const DIFF={
@@ -265,19 +273,22 @@ const DELS=[
 ];
 const DEL_BY_ID=Object.fromEntries(DELS.map(d=>[d.id,d]));
 function batDeliveryPool(bowler){
-  const id=bowler?.s ? Object.keys(BWL).find(k=>BWL[k].n===bowler.n) : null;
-  const tp=bowler?.tp||'pacer';
-  if(['ashwin','unni_bwl'].includes(id)) return ['offspin'];
-  if(['jadeja_bwl','pritam_bwl'].includes(id)) return ['offspin'];
+  const id=Object.keys(BWL).find(k=>BWL[k].n===bowler?.n) || '';
+  if(['ashwin','jadeja_bwl','pritam_bwl'].includes(id)) return ['offspin'];
   if(['rashid','viraj_bwl'].includes(id)) return ['legspin'];
-  if(tp==='spinner') return ['offspin','legspin'];
+  if(['unni_bwl'].includes(id)) return ['chinaman'];
   if(['boult','bhuvi','kavar_bwl'].includes(id)) return ['inswing','outswing'];
   if(['pathirana','malinga'].includes(id)) return ['inswing','bouncer'];
+  if(['shaheen','archer','harshit','joginder','stokes_bwl','sagar_bwl','abhishek_bwl','shreeju_bwl'].includes(id)) return ['inswing','outswing','bouncer'];
+  if(bowler?.tp==='spinner') return ['offspin','legspin'];
   return ['inswing','outswing','bouncer'];
 }
 function pickBatDelivery(){
   const pool=batDeliveryPool(G.bowl);
-  const did=pool[Math.floor(Math.random()*pool.length)]||'inswing';
+  let choices=pool.slice();
+  if(choices.length>1 && G.lastBatDel) choices=choices.filter(d=>d!==G.lastBatDel);
+  const did=choices[Math.floor(Math.random()*choices.length)]||pool[0]||'inswing';
+  G.lastBatDel=did;
   return DEL_BY_ID[did]||DELS[0];
 }
 
@@ -546,17 +557,11 @@ function areaLabel(a){
 function areaIcon(a){
   return a==='leg'?'↙':a==='off'?'↗':'↑';
 }
-function controlHintH(){
-  const c=G?.control||0;
-  const msg=c>=2?'Grounded play has you set. Lofted shots are now a little safer.':c===1?'You are getting set. Another grounded/defensive ball steadies the next big swing.':'Grounded and defensive shots build control. Smash too often and the risk climbs fast.';
-  return `<div class="ctrl-note">🧠 ${c>=2?'Set to attack':c===1?'Getting set':'Build control'}</div>`;
-}
-function controlMeterH(){
-  const c=G?.control||0;
-  const segs=Array.from({length:4},(_,i)=>`<div class="ctrl-seg ${i<c?'on':''} ${c>=3&&i<c?'hot':''}"></div>`).join('');
-  const state=c>=3?'Set batter':c===2?'In control':c===1?'Getting set':'Not set';
-  const tip=c>=3?'Attack on now':c>=1?'Base building':'Build control';
-  return `<div class="ctrl-meter"><div class="ctrl-head"><div class="ctrl-title">Control</div><div class="ctrl-state">${state}</div></div><div class="ctrl-track">${segs}</div><div class="ctrl-txt">${tip}</div></div>`;
+function playerStripH(){
+  return `<div class="player-strip">
+    <div class="player-chip"><div class="k">Bowler</div><div class="v">${G.bowl.n}</div></div>
+    <div class="player-chip"><div class="k">Batter</div><div class="v">${G.bat.n}</div></div>
+  </div>`;
 }
 function getPhaseSmashCount(){
   return G.ball>=4?(G.smashLate||0):(G.smashEarly||0);
@@ -614,12 +619,12 @@ function getBatTrajectory(shot,area,did){
     },
     ground:{
       leg:{W:{x:92,y:198},6:{x:70,y:228},4:{x:62,y:214},2:{x:92,y:178},1:{x:116,y:164},0:{x:138,y:148}},
-      straight:{W:{x:150,y:157},6:{x:146,y:206},4:{x:150,y:192},2:{x:150,y:172},1:{x:150,y:160},0:{x:150,y:148}},
+      straight:{W:{x:150,y:84},6:{x:150,y:34},4:{x:150,y:72},2:{x:150,y:104},1:{x:150,y:122},0:{x:150,y:140}},
       off:{W:{x:215,y:72},6:{x:230,y:98},4:{x:238,y:122},2:{x:198,y:120},1:{x:175,y:130},0:{x:158,y:120}}
     },
     defend:{
       leg:{W:{x:120,y:162},6:{x:90,y:228},4:{x:98,y:212},2:{x:112,y:182},1:{x:124,y:166},0:{x:140,y:152}},
-      straight:{W:{x:150,y:157},6:{x:88,y:228},4:{x:98,y:212},2:{x:150,y:180},1:{x:150,y:165},0:{x:150,y:152}},
+      straight:{W:{x:150,y:118},6:{x:150,y:78},4:{x:150,y:96},2:{x:150,y:126},1:{x:150,y:140},0:{x:150,y:150}},
       off:{W:{x:180,y:146},6:{x:212,y:216},4:{x:204,y:198},2:{x:188,y:174},1:{x:172,y:160},0:{x:156,y:150}}
     }
   };
@@ -747,7 +752,7 @@ function fieldSVG(fkey,pitchDotY){
   </svg>`;
 }
 function fw(fkey,pitchDotY){return`<div class="fwrap" id="fwrap">${fieldSVG(fkey,pitchDotY)}<div id="fball" style="left:50%;top:36%;"></div></div>`;}
-function releaseCueH(){return`<div class="release-cue" id="releaseCue">RELEASE</div>`;}
+function releaseCueH(){return`<div class="release-cue" id="releaseCue">BALL</div>`;}
 function clearReleaseCue(){if(releaseCueTimer){clearTimeout(releaseCueTimer);releaseCueTimer=null;}const rc=$('releaseCue');if(rc)rc.classList.remove('active');}
 function startBatReleaseCue(){clearReleaseCue();sb(150,97,0);releaseCueTimer=setTimeout(()=>{const rc=$('releaseCue');if(rc){void rc.offsetWidth;rc.classList.add('active');}sb(150,150,0.34);releaseCueTimer=null;},650);}
 function launchConfetti(count=24){const wrap=document.createElement('div');wrap.className='confetti-wrap';const colors=['#1D9E75','#E24B4A','#F0B429','#185FA5','#ffffff'];for(let i=0;i<count;i++){const piece=document.createElement('div');piece.className='confetti-piece';piece.style.left=(Math.random()*100)+'vw';piece.style.background=colors[Math.floor(Math.random()*colors.length)];piece.style.setProperty('--dx',((Math.random()*180)-90)+'px');piece.style.setProperty('--rot',((Math.random()*720)-360)+'deg');piece.style.animationDelay=(Math.random()*0.18)+'s';piece.style.opacity=String(0.85+Math.random()*0.15);wrap.appendChild(piece);}document.body.appendChild(wrap);setTimeout(()=>wrap.remove(),1300);}
@@ -755,7 +760,7 @@ function sb(cx,cy,t=0){const b=$('fball');if(!b)return;b.style.transition=t?`lef
 function projectToBoundary(ep){const cx=150,cy=135,rx=136,ry=121;const dx=ep.x-cx,dy=ep.y-cy;if(!dx&&!dy)return{x:cx,y:14};const scale=1/Math.sqrt((dx*dx)/(rx*rx)+(dy*dy)/(ry*ry));return{x:Math.max(14,Math.min(286,cx+dx*scale)),y:Math.max(14,Math.min(256,cy+dy*scale))};}
 function resultEndpoint(tmap,result){const rk=String(result==='W'?'W':result);const base=tmap[rk]||tmap['0']||{x:150,y:120};return (result===4||result===6)?projectToBoundary(base):base;}
 function getScenarioIndex(id){return Math.max(0,SC.findIndex(s=>s.id===id));}
-function nextScenario(){const idx=getScenarioIndex(G.sc?.id);const next=SC[(idx+1)%SC.length];const mode=G.mode;const diff=G.diff||'classic';const order=[...next.order];G={mode,sc:next,bat:{...BAT[order[0]]},bowl:{...BWL[next.bowl]},need:next.need,wkts:next.wkts,ball:0,scored:0,fallen:0,res:[],batOrder:order,batIdx:0,won:false,selShot:null,selArea:null,selDel:null,tq:'ok',btq:'ok',fmode:'defend',curDel:null,budget:{yorker:yorkerBudgetForDiff(diff),fuller:6,short:2},isDaily:false,screen:'scenario',timing:{active:false,paused:false,isBowl:false},smashEarly:0,smashLate:0,diff:diff,control:0,bucket:getScenarioBucket(next)};showSc();}
+function nextScenario(){const idx=getScenarioIndex(G.sc?.id);const next=SC[(idx+1)%SC.length];const mode=G.mode;const diff=G.diff||'classic';const order=[...next.order];G={mode,sc:next,bat:{...BAT[order[0]]},bowl:{...BWL[next.bowl]},need:next.need,wkts:next.wkts,ball:0,scored:0,fallen:0,res:[],batOrder:order,batIdx:0,won:false,selShot:null,selArea:null,selDel:null,tq:'ok',btq:'ok',fmode:'defend',curDel:null,budget:{yorker:yorkerBudgetForDiff(diff),fuller:6,short:2},isDaily:false,screen:'scenario',timing:{active:false,paused:false,isBowl:false},smashEarly:0,smashLate:0,diff:diff,bucket:getScenarioBucket(next)};showSc();}
 
 // ===== BALL ANIMATION =====
 function anim(tKey,result,cb){
@@ -900,6 +905,7 @@ function hitTiming(){
 }
 
 function playBatShot(area){
+  if(!(G&&G.timing&&G.timing.active))return;
   clearReleaseCue();
   if(autoHitTimer){clearTimeout(autoHitTimer);autoHitTimer=null;}
   if(rafId){cancelAnimationFrame(rafId);rafId=null;}
@@ -956,7 +962,7 @@ function timingBarH(sid,isBowl){
       <div class="tz tz-r" style="height:${cfg.rh}%"></div>
       <div class="t-cursor" id="tcursor"></div>
     </div>
-    <div class="t-label">${isBowl?'tap<br>bowl':'tap lane<br>to hit'}${!isBowl&&sid==='smash'?`<br><span style="font-size:7px;color:#5c5c58">${cfg.gh}% green</span>`:''}</div>
+    <div class="t-label">${isBowl?'tap<br>bowl':'tap side<br>to hit'}${!isBowl&&sid==='smash'?`<br><span style="font-size:7px;color:#5c5c58">${cfg.gh}% green</span>`:''}</div>
   </div>`;
 }
 
@@ -1005,7 +1011,7 @@ function startRound(mode,scenarioId=null,diff='classic',isDaily=false){
      need:s.need,wkts:s.wkts,ball:0,scored:0,fallen:0,res:[],batOrder:order,batIdx:0,won:false,
      selShot:null,selArea:null,selDel:null,tq:'ok',btq:'ok',fmode:'defend',curDel:null,
      budget:{yorker:yorkerBudgetForDiff(diff),fuller:6,short:2},isDaily:isDaily,
-     smashEarly:0,smashLate:0,timing:null,screen:'preview',diff:diff,control:0,bucket:bucket};
+     smashEarly:0,smashLate:0,timing:null,screen:'preview',diff:diff,bucket:bucket};
   showSc();
 }
 
@@ -1067,17 +1073,15 @@ function showBall(){
 // ── BAT MODE ──
 function showBatBall(){
   G.screen='bat_select';
-  const del=(G.screen==='bat_select'&&G.curDel)?G.curDel:pickBatDelivery();
+  const del=G.curDel||pickBatDelivery();
   G.curDel=del;
   G.selArea=null;
   const shots=[
-    {id:'smash', dir:'💥 Lofted',   n:'Lofted Shot',   desc:'Go aerial after release — biggest upside, biggest risk', col:'#E24B4A'},
-    {id:'ground',dir:'→ Grounded', n:'Grounded Shot', desc:'Pick a gap late — balanced and reliable', col:'#185FA5'},
-    {id:'defend',dir:'🛡 Defensive',n:'Defensive Shot',desc:'Watch it and survive — safest option', col:'#0F6E56'}
-  ].map(s=>`<div class="shot" style="border-color:${s.col}" onclick="selectShot('${s.id}')"><div class="sd" style="color:${s.col}">${s.dir}</div><div class="sn2" style="color:${s.col}">${s.n}</div><div class="sdesc">${s.desc}</div></div>`).join('');
-  $('g').innerHTML=`${topbarH(true)}${sbarH()}${trH()}<div class="del-banner" style="border-color:${del.col}"><div class="del-t" style="color:${del.col}">${del.icon} ${del.n}</div><div class="del-h">${del.h}</div></div>
-  ${controlMeterH()}${controlHintH()}
-  <div class="field-row"><div class="t-bar-wrap"><div style="font-size:8px;color:#8a8a85;text-align:center;margin-bottom:3px">release</div><div style="height:250px;background:#eeedea;border-radius:14px;border:0.5px solid #d4d3cf;display:flex;align-items:center;justify-content:center;padding:8px"><div style="font-size:9px;color:#5c5c58;text-align:center;line-height:1.35">pick<br>shot</div></div></div><div class="field-col">${fw(del.id,del.py)}</div><div class="shot-info"><div style="font-size:9px;color:#8a8a85">lane</div><div class="si-icon" style="font-size:14px">🎯</div><div class="si-n">Tap</div></div></div>${cstripH()}<div class="shots">${shots}</div>`;
+    {id:'smash', icon:'🏏', n:'Lofted', desc:'Big hit, high risk', col:'#E24B4A'},
+    {id:'ground',icon:'➜', n:'Grounded', desc:'Balanced option', col:'#185FA5'},
+    {id:'defend',icon:'🛡',n:'Defensive', desc:'Safest play', col:'#0F6E56'}
+  ].map(s=>`<div class="shot-pick"><button class="ft" style="border-color:${s.col};color:${s.col}" onclick="selectShot('${s.id}')">${s.icon} ${s.n}</button><div class="sub">${s.desc}</div></div>`).join('');
+  $('g').innerHTML=`${topbarH(true)}${sbarH()}${trH()}<div class="field-row"><div class="t-bar-wrap"><div style="font-size:8px;color:#8a8a85;text-align:center;margin-bottom:3px">ready</div><div style="height:250px;background:#eeedea;border-radius:14px;border:0.5px solid #d4d3cf;display:flex;align-items:center;justify-content:center;padding:8px"><div style="font-size:9px;color:#5c5c58;text-align:center;line-height:1.35">pick<br>shot</div></div></div><div class="field-col">${fw(del.id,del.py)}</div><div class="shot-info"><div style="font-size:9px;color:#8a8a85">delivery</div><div class="si-icon" style="font-size:14px">🎾</div><div class="si-n">read late</div></div></div>${playerStripH()}<div class="shot-picks">${shots}</div>`;
   sb(150,97,0);requestAnimationFrame(()=>requestAnimationFrame(()=>sb(150,150,0.36)));
 }
 
@@ -1086,22 +1090,29 @@ function selectArea(area){G.selArea=area;showBatBall();}
 function selectShot(sid){
   G.screen='bat_timing';
   G.selShot=sid;
-  const sh={smash:{dir:'💥',n:'Lofted',col:'#E24B4A'},ground:{dir:'→',n:'Grounded',col:'#185FA5'},defend:{dir:'🛡',n:'Defend',col:'#0F6E56'}}[sid];
+  G.selArea='straight';
+  const sh={smash:{dir:'🏏',n:'Lofted',col:'#E24B4A'},ground:{dir:'➜',n:'Grounded',col:'#185FA5'},defend:{dir:'🛡',n:'Defensive',col:'#0F6E56'}}[sid];
   const del=G.curDel;
-  const laneBtns=['leg','straight','off'].map(a=>`<button class="ft" onclick="playBatShot('${a}')">${areaIcon(a)} ${areaLabel(a)}</button>`).join('');
-  $('g').innerHTML=`${topbarH(true)}${sbarH()}${trH()}<div class="del-banner" style="border-color:${del.col}"><div class="del-t" style="color:${del.col}">${del.icon} ${del.n} — wait for release, then tap your lane!</div><div class="del-h">${del.h}</div></div>
+  const sideBtns=['leg','straight','off'].map(a=>`<button class="ft" onclick="playBatShot('${a}')">${areaIcon(a)} ${areaLabel(a)}</button>`).join('');
+  $('g').innerHTML=`${topbarH(true)}${sbarH()}${trH()}<div class="del-banner" style="border-color:${del.col}"><div class="del-t" style="color:${del.col}">${del.icon} ${del.n}</div><div class="del-h">Get ready...</div></div>
   <div class="field-row">
     <div class="t-bar-wrap">
       <div style="font-size:8px;color:#8a8a85;text-align:center;margin-bottom:3px">timing</div>
       ${timingBarH(sid,false)}
     </div>
     <div class="field-col">${fw(del.id,null)}${releaseCueH()}</div>
-    <div class="shot-info"><div class="si-icon" style="color:${sh.col}">${sh.dir}</div><div class="si-n" style="color:${sh.col}">${sh.n}</div><div style="font-size:8px;color:#8a8a85;margin-top:4px">tap late</div></div>
+    <div class="shot-info"><div class="si-icon" style="color:${sh.col}">${sh.dir}</div><div class="si-n" style="color:${sh.col}">${sh.n}</div><div style="font-size:8px;color:#8a8a85;margin-top:4px">tap side</div></div>
   </div>
-  ${controlMeterH()}<div style="text-align:center;font-size:10px;color:#5c5c58;margin-bottom:8px">Tap lane at contact.</div>
-  <div class="lane-row">${laneBtns}</div>`;
-  startBatReleaseCue();
-  startTiming();
+  ${playerStripH()}
+  <div class="lane-row">${sideBtns}</div>`;
+  const btns=[...document.querySelectorAll('.lane-row .ft')];
+  btns.forEach(b=>b.disabled=true);
+  setTimeout(()=>{
+    const hint=$('releaseCue'); if(hint){hint.textContent='RELEASE';}
+    btns.forEach(b=>b.disabled=false);
+    startBatReleaseCue();
+    startTiming();
+  },1200);
 }
 
 function proceedBat(fromTimeout=false){
@@ -1110,7 +1121,7 @@ function proceedBat(fromTimeout=false){
   const q=assessBatChoice(did,sid,area);
   const result=wt(getBatOuts(sid,did,G.tq,area));
   let comm=batComment(result,sid,area,did,q);
-  if(fromTimeout) comm='Too late to choose a lane. The bat comes down straight and the chance is gone.';
+  if(fromTimeout) comm='Too late to choose a side. The bat comes down straight and the chance is gone.';
   const tTag=G.tq==='perfect'?`<span class="timing-tag" style="background:#e1f5ee;color:#085041">🎯 Perfect timing!</span>`:G.tq==='good'?`<span class="timing-tag" style="background:#eaf3de;color:#27500a">✓ Good timing</span>`:G.tq==='poor'?`<span class="timing-tag" style="background:#fcebeb;color:#791f1f">✗ Late / mistimed</span>`:'';
   const qTag=q==='great'?`<span class="timing-tag" style="background:#e6f1fb;color:#0c447c">✓ Right matchup</span>`:q==='good'?`<span class="timing-tag" style="background:#eaf3de;color:#27500a">Good option</span>`:q==='bad'?`<span class="timing-tag" style="background:#faeeda;color:#633806">Wrong option</span>`:q==='risky'?`<span class="timing-tag" style="background:#fcebeb;color:#791f1f">Risky choice</span>`:'';
   const areaTag=`<span class="timing-tag" style="background:#eeedea;color:#1a1a18">${areaIcon(area)} ${areaLabel(area)}</span>`;
