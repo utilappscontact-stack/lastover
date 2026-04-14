@@ -115,6 +115,21 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 @keyframes releasePulse{0%{opacity:0;transform:translate(-50%,-50%) scale(.82);}20%{opacity:1;}65%{opacity:1;transform:translate(-50%,-54%) scale(1.03);}100%{opacity:0;transform:translate(-50%,-68%) scale(1.08);}}
 @keyframes confettiFall{0%{transform:translate3d(0,0,0) rotate(0deg);opacity:1;}100%{transform:translate3d(var(--dx),105vh,0) rotate(var(--rot));opacity:0;}}
 
+
+.app-section{margin-top:10px;}
+.choice-grid{display:grid;grid-template-columns:1fr;gap:10px;margin:12px 0;}
+.choice-card{background:#fff;border:1.5px solid var(--border);border-radius:14px;padding:14px 14px 12px;cursor:pointer;transition:transform .12s,border-color .15s;}
+.choice-card:hover{transform:translateY(-2px);border-color:var(--text);}
+.choice-kicker{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text2);margin-bottom:4px;}
+.choice-title{font-size:17px;font-weight:700;margin-bottom:4px;}
+.choice-sub{font-size:12px;color:var(--text2);line-height:1.45;}
+.choice-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;}
+.pill-bucket{display:inline-block;font-size:9px;border-radius:999px;padding:3px 8px;background:var(--bg2);border:0.5px solid var(--border);text-transform:uppercase;letter-spacing:.06em;color:var(--text2);margin-bottom:6px;}
+.lane-row{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:8px;}
+.lane-row .ft{padding:10px 6px;font-size:12px;}
+.ctrl-note{background:var(--blue-bg);border:0.5px solid #b5d4f4;border-radius:10px;padding:9px 10px;font-size:11px;color:#0c447c;line-height:1.45;margin-bottom:8px;}
+.diff-badge{display:inline-block;font-size:10px;text-transform:uppercase;letter-spacing:.08em;padding:4px 8px;border-radius:999px;background:var(--bg2);border:0.5px solid var(--border);color:var(--text2);margin-top:8px;}
+
 </style>
 </head>
 <body>
@@ -140,9 +155,36 @@ const SC=[
   {id:'srh_rcb16',match:'IPL 2016 — Final',             bt:'RCB',            bwt:'SRH',              bc:'#EC1C24',wc:'#FF6200',bowl:'bhuvi',      need:16,wkts:4,order:['kohli','maxwell_b','stoinis','tail_b']},
   {id:'pak_ind07',match:'T20 WC 2007 — Final 🌟',      bt:'Pakistan',       bwt:'India',            bc:'#01411C',wc:'#0033A0',bowl:'joginder',   need:12,wkts:3,order:['misbah','stoinis','tail_b','tail_b']},
   {id:'mi_csk13', match:'IPL 2013 — Final',             bt:'Mumbai Indians', bwt:'CSK',              bc:'#004BA0',wc:'#FBCF00',bowl:'ashwin',     need:16,wkts:3,order:['rohit','sky','maxwell_b','tail_b']}
-];
 
-// ===== BATTERS =====
+];
+SC.push(
+  {id:'gully_bandra',match:'Gully Match — Bandra Reclamation',bt:'Khar Kings',bwt:'Bandra Blasters',bc:'#A04E1A',wc:'#6E3E1D',bowl:'harshit',need:12,wkts:3,order:['rohit','iyer_b','hardik','tail_b'],bucket:'gully'},
+  {id:'gully_indore',match:'Gully Match — Indore Tennis Ball Night',bt:'Palasia Panthers',bwt:'Rajwada Rockets',bc:'#8C4B20',wc:'#A85D23',bowl:'bhuvi',need:10,wkts:2,order:['kohli','sky','stoinis','tail_b'],bucket:'gully'},
+  {id:'gully_delhi',match:'Gully Match — Rohini Block Cup',bt:'Rohini Riders',bwt:'Pitampura XI',bc:'#905226',wc:'#6A3718',bowl:'joginder',need:14,wkts:4,order:['maxwell_b','iyer_b','faf_b','tail_b'],bucket:'gully'},
+  {id:'gully_pune',match:'Gully Match — Wakad Box Cricket',bt:'Wakad Warriors',bwt:'Baner Bulls',bc:'#9A5526',wc:'#70401F',bowl:'jadeja_bwl',need:11,wkts:3,order:['gill_b','miller','hardik','tail_b'],bucket:'gully'}
+);
+
+const DIFF={
+  easy:{n:'Easy',shot:1.14,wkt:0.82,bowlWkt:1.12,bowlLeak:0.86,yorkers:2,smashPad:2},
+  classic:{n:'Classic',shot:1,wkt:1,bowlWkt:1,bowlLeak:1,yorkers:1,smashPad:0},
+  hard:{n:'Hard',shot:0.9,wkt:1.14,bowlWkt:0.9,bowlLeak:1.12,yorkers:0,smashPad:-2}
+};
+
+function getScenarioBucket(sc){
+  if(sc?.bucket)return sc.bucket;
+  return /IPL/i.test(sc?.match||'')?'ipl':'international';
+}
+function getBucketLabel(bucket){
+  return bucket==='ipl'?'IPL':bucket==='international'?'Internationals':'Gully Match';
+}
+function getBucketScenarios(bucket){
+  return SC.filter(s=>getScenarioBucket(s)===bucket);
+}
+function diffMeta(key){return DIFF[key]||DIFF.classic;}
+function diffLabel(key){return diffMeta(key).n;}
+function yorkerBudgetForDiff(key){return Math.max(0,diffMeta(key).yorkers);}
+function currentDiff(){return diffMeta(G?.diff||'classic');}
+
 const BAT={
   rohit:      {n:'Rohit Sharma',    s:'Rohit',     tp:'power',      tl:'Power Hitter',    c:'medium',tr:'Devastating when set.'},
   kohli:      {n:'Virat Kohli',     s:'Kohli',     tp:'accumulator',tl:'Run Machine',     c:'high',  tr:'Ice-cold under pressure.'},
@@ -419,7 +461,7 @@ function openMenu(paused=false){
     <div class="sheet-grid">
       ${canResume?`<button class="btn btnP" onclick="resumeGame()">Resume</button>`:''}
       <button class="btn ${canResume?'':'btnP'}" onclick="abandonTo(showModeSelect)">Home</button>
-      <button class="btn" onclick="abandonTo(showScenarioSelect)">Select scenario</button>
+      <button class="btn" onclick="abandonTo(showScenarioBuckets)">Select scenario</button>
       <button class="btn" onclick="abandonTo(showTrophies)">Trophies cabinet</button>
     </div>
   </div>`;
@@ -442,12 +484,16 @@ function registerSmashUse(){
 }
 function getTimingCfg(sid,isBowl){
   const base={...(isBowl?(BOWL_CFG[sid]||BOWL_CFG.fuller):(SHOT_CFG[sid]||SHOT_CFG.ground))};
+  const diff=currentDiff();
   if(!isBowl&&sid==='smash'){
-    const gh=getSmashWindow();
+    const gh=Math.max(5,getSmashWindow()+(diff.smashPad||0));
     const delta=(base.gh||15)-gh;
     base.gh=gh;
     base.rh=(base.rh||27)+Math.max(0,delta);
+  }else if(!isBowl&&sid!=='smash'&&(diff.smashPad||0)!==0){
+    base.gh=Math.max(12,(base.gh||20)+Math.round((diff.smashPad||0)/2));
   }
+  if(isBowl&&G?.diff==='hard'&&sid==='short')base.speed=Math.max(850,(base.speed||1050)-80);
   return base;
 }
 
@@ -456,6 +502,25 @@ function areaLabel(a){
 }
 function areaIcon(a){
   return a==='leg'?'↙':a==='off'?'↗':'↑';
+}
+function controlHintH(){
+  const c=G?.control||0;
+  const msg=c>=2?'Grounded play has you set. Lofted shots are now a little safer.':c===1?'You are getting set. Another grounded/defensive ball steadies the next big swing.':'Grounded and defensive shots build control. Smash too often and the risk climbs fast.';
+  return `<div class="ctrl-note">🧠 ${msg}</div>`;
+}
+function getPhaseSmashCount(){
+  return G.ball>=4?(G.smashLate||0):(G.smashEarly||0);
+}
+function updateBatControl(result){
+  const shot=G.selShot;
+  if(G.mode!=='bat')return;
+  if(shot==='smash'){
+    G.control=Math.max(0,(G.control||0)-1);
+    return;
+  }
+  if(result==='W')return;
+  if(shot==='ground')G.control=Math.min(3,(G.control||0)+1);
+  else if(shot==='defend')G.control=Math.min(3,(G.control||0)+2);
 }
 function assessBatChoice(did,sid,area){
   const base=MATCH[did]?.[sid]||'neutral';
@@ -544,11 +609,14 @@ function scenarioWinState(id){
   const sc=st.scenarios[id]||{bat:0,bowl:0};
   return{bat:!!sc.bat,bowl:!!sc.bowl,count:(sc.bat||0)+(sc.bowl||0)};
 }
-function showScenarioSelect(){
+function showScenarioSelect(bucket=null){
+  if(!bucket){showScenarioBuckets();return;}
   G.screen='scenario';
-  const cards=SC.map(s=>{
+  const bucketSc=getBucketScenarios(bucket);
+  const cards=bucketSc.map(s=>{
     const st=scenarioWinState(s.id);
     const badges=[
+      `<span class="pill-bucket">${getBucketLabel(bucket)}</span>`,
       st.bat?'<span class="pill">🏏 Bat cleared</span>':'',
       st.bowl?'<span class="pill">🎯 Bowl cleared</span>':'',
       !st.bat&&!st.bowl?'<span class="pill">New challenge</span>':''
@@ -559,18 +627,19 @@ function showScenarioSelect(){
       <div class="sc-sub">Need ${s.need} off 6 · ${s.wkts} wickets in hand · Bowler: ${BWL[s.bowl].n}</div>
       <div class="pill-row">${badges}</div>
       <div class="mini-actions">
-        <button class="btn btnP" onclick="init('bat','${s.id}')">Bat</button>
-        <button class="btn" onclick="init('bowl','${s.id}')">Bowl</button>
+        <button class="btn btnP" onclick="showDifficultySelect('bat','${s.id}')">Bat</button>
+        <button class="btn" onclick="showDifficultySelect('bowl','${s.id}')">Bowl</button>
       </div>
     </div>`;
   }).join('');
   $('g').innerHTML=`${topbarH(false)}
     <div style="text-align:center;padding:4px 0 6px">
-      <div style="font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:#8a8a85;margin-bottom:5px">Select scenario</div>
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:#8a8a85;margin-bottom:5px">${getBucketLabel(bucket)}</div>
       <div style="font-size:22px;font-weight:700">Pick your over</div>
-      <div style="font-size:13px;color:#5c5c58;margin-top:4px">Choose a famous chase and play it in bat or bowl mode.</div>
+      <div style="font-size:13px;color:#5c5c58;margin-top:4px">${bucket==='gully'?'Local playground pressure with a brown outfield.':'Choose a chase and then set the difficulty.'}</div>
     </div>
-    <div class="sc-list">${cards}</div>`;
+    <div class="sc-list">${cards}</div>
+    <button class="btn" onclick="showScenarioBuckets()">Back to buckets</button>`;
 }
 function showTrophies(){
   G.screen='trophies';
@@ -602,11 +671,15 @@ function showTrophies(){
 // ===== FIELD SVG =====
 function fieldSVG(fkey,pitchDotY){
   const pos=FP[fkey]||FP.full;
+  const gully=G?.bucket==='gully';
+  const outerFill=gully?'#8A5A30':'#2d5a27';
+  const outerStroke=gully?'#603915':'#1c3d16';
+  const innerFill=gully?'#9C6B3C':'#275221';
   const fs=pos.map(p=>`<circle cx="${p[0]}" cy="${p[1]}" r="5.5" fill="#f0f0e8" stroke="#9a9a88" stroke-width="1.2" opacity=".88"/>`).join('');
   const pd=pitchDotY?`<circle cx="150" cy="${pitchDotY}" r="4.5" fill="#F0B429" stroke="#996600" stroke-width="1" opacity=".9"/>`:'';
   return`<svg width="100%" viewBox="0 0 300 270" style="display:block;">
-    <ellipse cx="150" cy="135" rx="136" ry="121" fill="#2d5a27" stroke="#1c3d16" stroke-width="1.5"/>
-    <ellipse cx="150" cy="135" rx="68" ry="60" fill="#275221" stroke="#1c3d16" stroke-width="1" stroke-dasharray="4,3" opacity=".55"/>
+    <ellipse cx="150" cy="135" rx="136" ry="121" fill="${outerFill}" stroke="${outerStroke}" stroke-width="1.5"/>
+    <ellipse cx="150" cy="135" rx="68" ry="60" fill="${innerFill}" stroke="${outerStroke}" stroke-width="1" stroke-dasharray="4,3" opacity=".55"/>
     <rect x="143" y="93" width="14" height="84" rx="2" fill="#c8a86e" stroke="#b89050" stroke-width=".8"/>
     <line x1="139" y1="152" x2="161" y2="152" stroke="#fff" stroke-width="1.2" opacity=".9"/>
     <line x1="139" y1="106" x2="161" y2="106" stroke="#fff" stroke-width="1.2" opacity=".9"/>
@@ -632,7 +705,7 @@ function sb(cx,cy,t=0){const b=$('fball');if(!b)return;b.style.transition=t?`lef
 function projectToBoundary(ep){const cx=150,cy=135,rx=136,ry=121;const dx=ep.x-cx,dy=ep.y-cy;if(!dx&&!dy)return{x:cx,y:14};const scale=1/Math.sqrt((dx*dx)/(rx*rx)+(dy*dy)/(ry*ry));return{x:Math.max(14,Math.min(286,cx+dx*scale)),y:Math.max(14,Math.min(256,cy+dy*scale))};}
 function resultEndpoint(tmap,result){const rk=String(result==='W'?'W':result);const base=tmap[rk]||tmap['0']||{x:150,y:120};return (result===4||result===6)?projectToBoundary(base):base;}
 function getScenarioIndex(id){return Math.max(0,SC.findIndex(s=>s.id===id));}
-function nextScenario(){const idx=getScenarioIndex(G.sc?.id);const next=SC[(idx+1)%SC.length];const mode=G.mode;const order=[...next.order];G={mode,sc:next,bat:{...BAT[order[0]]},bowl:{...BWL[next.bowl]},need:next.need,wkts:next.wkts,ball:0,scored:0,fallen:0,res:[],batOrder:order,batIdx:0,won:false,selShot:null,selArea:null,selDel:null,tq:'ok',btq:'ok',fmode:'defend',curDel:null,budget:{yorker:1,fuller:6,short:3},isDaily:false,screen:'scenario',timing:{active:false,paused:false,isBowl:false},smashCycle:{phase1:0,phase2:0}};showSc();}
+function nextScenario(){const idx=getScenarioIndex(G.sc?.id);const next=SC[(idx+1)%SC.length];const mode=G.mode;const diff=G.diff||'classic';const order=[...next.order];G={mode,sc:next,bat:{...BAT[order[0]]},bowl:{...BWL[next.bowl]},need:next.need,wkts:next.wkts,ball:0,scored:0,fallen:0,res:[],batOrder:order,batIdx:0,won:false,selShot:null,selArea:null,selDel:null,tq:'ok',btq:'ok',fmode:'defend',curDel:null,budget:{yorker:yorkerBudgetForDiff(diff),fuller:6,short:2},isDaily:false,screen:'scenario',timing:{active:false,paused:false,isBowl:false},smashEarly:0,smashLate:0,diff:diff,control:0,bucket:getScenarioBucket(next)};showSc();}
 
 // ===== BALL ANIMATION =====
 function anim(tKey,result,cb){
@@ -657,6 +730,9 @@ function getBatOuts(sid,did,tq,area){
   const o=BOUTS[sid].map(x=>({...x}));
   const m=(p,mt)=>o.forEach(x=>{if(p(x))x.w=Math.max(1,Math.round(x.w*mt));});
   const q=assessBatChoice(did,sid,area||'straight');
+  const diff=currentDiff();
+  const control=G.control||0;
+  const spam=getPhaseSmashCount();
   if(q==='great'){m(x=>x.r==='W',0.5);m(x=>x.r===4||x.r===6,1.6);}
   else if(q==='bad'){m(x=>x.r==='W',1.7);m(x=>x.r===4||x.r===6,0.55);}
   else if(q==='risky')m(x=>x.r==='W',1.45);
@@ -676,6 +752,27 @@ function getBatOuts(sid,did,tq,area){
   if(bw.tp==='death'&&sid==='smash')m(x=>x.r===6,0.72);
   if(G.fmode==='defend')m(x=>x.r===6,0.72);
   else if(G.fmode==='attack'){m(x=>x.r===4||x.r===6,1.2);m(x=>x.r==='W',1.1);}
+
+  if(sid==='smash'){
+    if(spam>=1){
+      m(x=>x.r==='W',1.22 + spam*0.16);
+      m(x=>x.r===6,Math.max(0.45,0.9 - spam*0.16));
+      m(x=>x.r===4,Math.max(0.6,0.96 - spam*0.12));
+    }
+    if(control<=0){m(x=>x.r==='W',1.18);m(x=>x.r===4||x.r===6,0.9);}
+    else{m(x=>x.r==='W',Math.max(0.7,1-(control*0.08)));m(x=>x.r===4||x.r===6,1+(control*0.06));}
+  }else if(sid==='ground'){
+    m(x=>x.r==='W',0.84);
+    m(x=>x.r===1||x.r===2,1.18);
+    if(control>0)m(x=>x.r===4,1.08);
+  }else if(sid==='defend'){
+    m(x=>x.r==='W',0.72);
+    m(x=>x.r===0||x.r===1,1.28);
+    m(x=>x.r===4||x.r===6,0.4);
+  }
+
+  m(x=>x.r==='W',diff.wkt);
+  m(x=>x.r===4||x.r===6,diff.shot);
   return o;
 }
 
@@ -695,6 +792,9 @@ function getWOuts(did,btq){
   if(bt.tp==='power'&&did==='short')m(x=>x.r===6,1.4);
   if(G.fmode==='attack'){m(x=>x.r==='W',1.22);m(x=>x.r===4||x.r===6,0.92);}
   else m(x=>x.r===4||x.r===6,0.88);
+  const diff=currentDiff();
+  m(x=>x.r==='W',diff.bowlWkt);
+  m(x=>x.r===4||x.r===6,diff.bowlLeak);
   return o;
 }
 
@@ -830,38 +930,82 @@ function showModeSelect(){
     <div style="font-size:11px;color:var(--text2)">${daily.mode==='bat'?'🏏 Bat':'🎯 Bowl'} · ${daily.sc.bt} vs ${daily.sc.bwt}</div>
     ${done?`<div style="font-size:12px;margin-top:6px;font-weight:600;color:${dres==='W'?'#0f6e56':'#a32d2d'}">${dres==='W'?'✓ Won today':'✗ Lost today'} · Come back tomorrow!</div>`:'<div style="font-size:11px;color:var(--text2);margin-top:5px">Same scenario for everyone today →</div>'}
   </div>`;
-  $('g').innerHTML=`${topbarH(false)}<div style="text-align:center;padding:10px 0 6px"><div style="font-size:10px;text-transform:uppercase;letter-spacing:.14em;color:#8a8a85;margin-bottom:5px">Last Over</div><div style="font-size:22px;font-weight:700">One over. Everything on the line.</div><div style="font-size:13px;color:#5c5c58;margin-top:4px">16 IPL &amp; T20 World Cup scenarios</div></div>
+  $('g').innerHTML=`${topbarH(false)}<div style="text-align:center;padding:10px 0 6px"><div style="font-size:10px;text-transform:uppercase;letter-spacing:.14em;color:#8a8a85;margin-bottom:5px">Last Over</div><div style="font-size:22px;font-weight:700">One over. Everything on the line.</div><div style="font-size:13px;color:#5c5c58;margin-top:4px">${SC.length} scenarios across IPL, internationals and gully cricket</div></div>
   ${statsH}${dailyH}
-  <div class="mgrid"><div class="mc" onclick="init('bat')"><div class="mc-i">🏏</div><div class="mc-n">Quick Bat</div><div class="mc-d">Read the delivery. Time your shot. Chase the target.</div></div><div class="mc" onclick="init('bowl')"><div class="mc-i">🎯</div><div class="mc-n">Quick Bowl</div><div class="mc-d">Set your field. Time your delivery. Defend the total.</div></div></div>
-  <button class="btn" onclick="showScenarioSelect()">Select scenario</button>
+  <div class="mgrid"><div class="mc" onclick="showDifficultySelect('bat')"><div class="mc-i">🏏</div><div class="mc-n">Quick Bat</div><div class="mc-d">Read the delivery. Time your shot. Chase the target.</div></div><div class="mc" onclick="showDifficultySelect('bowl')"><div class="mc-i">🎯</div><div class="mc-n">Quick Bowl</div><div class="mc-d">Set your field. Time your delivery. Defend the total.</div></div></div>
+  <button class="btn" onclick="showScenarioBuckets()">Select scenario</button>
   <button class="btn" onclick="showTrophies()">Trophies cabinet</button>`;
 }
 
 function initDaily(){
   const d=getDailyScenario();
-  const s=d.sc;
+  startRound(d.mode,d.sc.id,'classic',true);
+}
+
+function init(mode,scenarioId=null,diff='classic'){
+  startRound(mode,scenarioId,diff,false);
+}
+
+function startRound(mode,scenarioId=null,diff='classic',isDaily=false){
+  const source=scenarioId?SC.find(x=>x.id===scenarioId):SC[Math.floor(Math.random()*SC.length)];
+  const s=source||SC[0];
   const order=[...s.order];
-  G={mode:d.mode,sc:s,bat:{...BAT[order[0]]},bowl:{...BWL[s.bowl]},
+  const bucket=getScenarioBucket(s);
+  G={mode,sc:s,bat:{...BAT[order[0]]},bowl:{...BWL[s.bowl]},
      need:s.need,wkts:s.wkts,ball:0,scored:0,fallen:0,res:[],batOrder:order,batIdx:0,won:false,
-     selShot:null,selDel:null,tq:'ok',btq:'ok',fmode:'defend',curDel:null,budget:{yorker:1,fuller:6,short:2},
-     isDaily:true,smashEarly:0,smashLate:0,timing:null,screen:'preview'};
+     selShot:null,selArea:null,selDel:null,tq:'ok',btq:'ok',fmode:'defend',curDel:null,
+     budget:{yorker:yorkerBudgetForDiff(diff),fuller:6,short:2},isDaily:isDaily,
+     smashEarly:0,smashLate:0,timing:null,screen:'preview',diff:diff,control:0,bucket:bucket};
   showSc();
 }
 
-function init(mode,scenarioId=null){
-  const s=scenarioId?SC.find(x=>x.id===scenarioId):SC[Math.floor(Math.random()*SC.length)];
-  const order=[...s.order];
-  G={mode,sc:s,bat:{...BAT[order[0]]},bowl:{...BWL[s.bowl]},
-     need:s.need,wkts:s.wkts,ball:0,scored:0,fallen:0,res:[],batOrder:order,batIdx:0,won:false,
-     selShot:null,selDel:null,tq:'ok',btq:'ok',fmode:'defend',curDel:null,budget:{yorker:1,fuller:6,short:2},
-     isDaily:false,smashEarly:0,smashLate:0,timing:null,screen:'preview'};
-  showSc();
+function showScenarioBuckets(){
+  G.screen='scenario_buckets';
+  const buckets=[
+    {id:'ipl',title:'IPL',sub:'Franchise pressure, packed grounds, death-over specialists.',icon:'🏟️'},
+    {id:'international',title:'Internationals',sub:'World Cup and international finishes with elite bowling attacks.',icon:'🌍'},
+    {id:'gully',title:'Gully Match',sub:'Local Indian playground pressure. Dusty outfield, tennis-ball energy.',icon:'🪵'}
+  ].map(b=>`<div class="choice-card" onclick="showScenarioSelect('${b.id}')"><div class="choice-kicker">${b.icon} ${getBucketScenarios(b.id).length} scenarios</div><div class="choice-title">${b.title}</div><div class="choice-sub">${b.sub}</div></div>`).join('');
+  $('g').innerHTML=`${topbarH(false)}
+    <div style="text-align:center;padding:4px 0 6px">
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:#8a8a85;margin-bottom:5px">Scenario buckets</div>
+      <div style="font-size:22px;font-weight:700">Pick your stage</div>
+      <div style="font-size:13px;color:#5c5c58;margin-top:4px">Choose the type of pressure first, then the exact over.</div>
+    </div>
+    <div class="choice-grid">${buckets}</div>
+    <button class="btn" onclick="showModeSelect()">Back</button>`;
+}
+
+function showDifficultySelect(mode,scenarioId=null){
+  G.screen='difficulty';
+  const s=scenarioId?SC.find(x=>x.id===scenarioId):null;
+  const heading=s?`${s.bt} vs ${s.bwt}`:`Quick ${mode==='bat'?'Bat':'Bowl'}`;
+  const sub=s?`${s.match} · ${getBucketLabel(getScenarioBucket(s))}`:`Random scenario · ${mode==='bat'?'chase a target':'defend a target'}`;
+  const cards=['easy','classic','hard'].map(k=>{
+    const d=DIFF[k];
+    const note=mode==='bat'
+      ?(k==='easy'?'Wider timing, kinder batting outcomes.':k==='classic'?'Original balance.':'Tighter windows and harsher punishments.')
+      :(k==='easy'?'Two yorkers and kinder bowling outcomes.':k==='classic'?'Balanced defending challenge.':'No yorker safety net and batters punish misses.');
+    return `<div class="choice-card" onclick="init('${mode}',${scenarioId?`'${scenarioId}'`:'null'},'${k}')">
+      <div class="choice-kicker">${mode==='bat'?'🏏':'🎯'} Difficulty</div>
+      <div class="choice-title">${d.n}</div>
+      <div class="choice-sub">${note}</div>
+    </div>`;
+  }).join('');
+  $('g').innerHTML=`${topbarH(false)}
+    <div style="text-align:center;padding:4px 0 6px">
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:#8a8a85;margin-bottom:5px">Choose difficulty</div>
+      <div style="font-size:22px;font-weight:700">${heading}</div>
+      <div style="font-size:13px;color:#5c5c58;margin-top:4px">${sub}</div>
+    </div>
+    <div class="choice-grid">${cards}</div>
+    <button class="btn" onclick="${scenarioId?`showScenarioSelect('${getScenarioBucket(SC.find(x=>x.id===scenarioId))}')`:`showModeSelect()`}">Back</button>`;
 }
 
 function showSc(){
   G.screen='preview';
   const s=G.sc;
-  $('g').innerHTML=`${topbarH(true)}<div class="match-hdr">${s.match}</div><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><div style="font-size:15px;font-weight:700;color:${s.bc}">${s.bt}</div><div style="font-size:12px;color:#5c5c58">vs</div><div style="font-size:15px;font-weight:700;color:${s.wc};text-align:right">${s.bwt}</div></div><div class="sc-card"><div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#5c5c58;margin-bottom:4px">${G.mode==='bat'?'You need to score':'Defend this total'}</div><div style="font-size:44px;font-weight:700;line-height:1;margin-bottom:3px;color:${nc(G.need,6)}">${G.need}</div><div style="font-size:14px;color:#5c5c58">runs off 6 balls · ${G.wkts} wicket${G.wkts!==1?'s':''} in hand</div></div><div class="cstrip"><div class="cc"><div class="cc-r" style="color:#854f0b">Bowling · ${G.bowl.tl}</div><div class="cc-n">${G.bowl.n}</div><div style="font-size:10px;color:#5c5c58;margin:3px 0 5px">${G.bowl.tr}</div>${cdots(G.bowl.c)}</div><div class="cc"><div class="cc-r" style="color:#0f6e56">Opening · ${G.bat.tl}</div><div class="cc-n">${G.bat.n}</div><div style="font-size:10px;color:#5c5c58;margin:3px 0 5px">${G.bat.tr}</div>${cdots(G.bat.c)}</div></div><button class="btn btnP" onclick="showBall()">Play the over →</button>`;
+  $('g').innerHTML=`${topbarH(true)}<div class="match-hdr">${s.match}</div><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><div style="font-size:15px;font-weight:700;color:${s.bc}">${s.bt}</div><div style="font-size:12px;color:#5c5c58">vs</div><div style="font-size:15px;font-weight:700;color:${s.wc};text-align:right">${s.bwt}</div></div><div class="sc-card"><div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#5c5c58;margin-bottom:4px">${G.mode==='bat'?'You need to score':'Defend this total'}</div><div style="font-size:44px;font-weight:700;line-height:1;margin-bottom:3px;color:${nc(G.need,6)}">${G.need}</div><div style="font-size:14px;color:#5c5c58">runs off 6 balls · ${G.wkts} wicket${G.wkts!==1?'s':''} in hand</div><div class="diff-badge">${diffLabel(G.diff)} · ${getBucketLabel(G.bucket)}</div></div><div class="cstrip"><div class="cc"><div class="cc-r" style="color:#854f0b">Bowling · ${G.bowl.tl}</div><div class="cc-n">${G.bowl.n}</div><div style="font-size:10px;color:#5c5c58;margin:3px 0 5px">${G.bowl.tr}</div>${cdots(G.bowl.c)}</div><div class="cc"><div class="cc-r" style="color:#0f6e56">Opening · ${G.bat.tl}</div><div class="cc-n">${G.bat.n}</div><div style="font-size:10px;color:#5c5c58;margin:3px 0 5px">${G.bat.tr}</div>${cdots(G.bat.c)}</div></div><button class="btn btnP" onclick="showBall()">Play the over →</button>`;
 }
 
 function showBall(){
@@ -882,6 +1026,7 @@ function showBatBall(){
     {id:'defend',dir:'🛡 Defensive',n:'Defensive Shot',desc:'Watch it and survive — safest option', col:'#0F6E56'}
   ].map(s=>`<div class="shot" style="border-color:${s.col}" onclick="selectShot('${s.id}')"><div class="sd" style="color:${s.col}">${s.dir}</div><div class="sn2" style="color:${s.col}">${s.n}</div><div class="sdesc">${s.desc}</div></div>`).join('');
   $('g').innerHTML=`${topbarH(true)}${sbarH()}${trH()}<div class="del-banner" style="border-color:${del.col}"><div class="del-t" style="color:${del.col}">${del.icon} ${del.n}</div><div class="del-h">${del.h}</div></div>
+  ${controlHintH()}
   <div class="field-row"><div class="t-bar-wrap"><div style="font-size:8px;color:#8a8a85;text-align:center;margin-bottom:3px">release</div><div style="height:250px;background:#eeedea;border-radius:14px;border:0.5px solid #d4d3cf;display:flex;align-items:center;justify-content:center;padding:8px"><div style="font-size:9px;color:#5c5c58;text-align:center;line-height:1.5">pre-pick<br>the shot</div></div></div><div class="field-col">${fw(del.id,del.py)}</div><div class="shot-info"><div style="font-size:9px;color:#8a8a85">control</div><div class="si-icon" style="font-size:14px">✋</div><div class="si-n">Tap lane</div></div></div>${cstripH()}<div style="font-size:11px;color:#5c5c58;margin-bottom:6px;text-align:center">Choose the shot now. After the ball is released, tap leg side, straight, or off side to play it.</div><div class="shots">${shots}</div>`;
   sb(150,97,0);requestAnimationFrame(()=>requestAnimationFrame(()=>sb(150,150,0.36)));
 }
@@ -903,8 +1048,8 @@ function selectShot(sid){
     <div class="field-col">${fw(del.id,null)}${releaseCueH()}</div>
     <div class="shot-info"><div class="si-icon" style="color:${sh.col}">${sh.dir}</div><div class="si-n" style="color:${sh.col}">${sh.n}</div><div style="font-size:8px;color:#8a8a85;margin-top:4px">tap late</div></div>
   </div>
-  <div style="text-align:center;font-size:11px;color:#5c5c58;margin-bottom:8px">${sh.n} selected. Tap a lane at contact to choose direction.</div>
-  <div class="ft-row">${laneBtns}</div>`;
+  <div style="text-align:center;font-size:11px;color:#5c5c58;margin-bottom:8px">${sh.n} selected. Tap a lane at contact to choose direction. Grounded and defensive shots are the best way to get set.</div>
+  <div class="lane-row">${laneBtns}</div>`;
   startBatReleaseCue();
   startTiming();
 }
