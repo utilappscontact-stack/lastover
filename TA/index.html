@@ -801,6 +801,231 @@ body.preload * { transition:none !important; animation:none !important; }
 
 /* ─── TUTORIAL STEP 1 GUARD ─── */
 #tut-close.step1-hidden { visibility:hidden; pointer-events:none; }
+
+/* ─── HOME SCREEN TOP BAR ─── */
+#start-topbar {
+  display:flex; align-items:center; justify-content:space-between;
+  width:100%; max-width:330px; padding:0 0 10px; flex-shrink:0;
+}
+.start-icon-btn {
+  background:none; border:1px solid #3A2410; color:#6A4820;
+  border-radius:999px; padding:8px 11px; font-size:15px; line-height:1;
+  cursor:pointer; font-family:inherit; min-width:44px; min-height:44px;
+  display:flex; align-items:center; justify-content:center;
+  transition:border-color .18s, color .18s, background .18s;
+}
+.start-icon-btn:hover, .start-icon-btn:focus-visible {
+  outline:none; color:#A07838; border-color:rgba(168,100,30,.4);
+  background:rgba(168,100,30,.08);
+}
+.start-icon-btn:active { background:#1C1008; }
+.start-icon-btn.muted { opacity:.45; }
+
+/* ─── TITLE GLOW BREATHING ─── */
+@keyframes titleGlowPulse {
+  0%,100% { text-shadow: 0 0 28px rgba(232,135,26,.35); }
+  50%      { text-shadow: 0 0 52px rgba(232,135,26,.72), 0 0 80px rgba(232,135,26,.20); }
+}
+.start-title { animation: titleGlowPulse 4s ease-in-out infinite; }
+
+/* ─── SETTINGS BOTTOM-SHEET ─── */
+#settings-backdrop {
+  position:fixed; inset:0; background:rgba(6,4,1,.55);
+  z-index:60; opacity:0; pointer-events:none; transition:opacity .28s;
+}
+#settings-backdrop.show { opacity:1; pointer-events:auto; }
+#settings-sheet {
+  position:fixed; left:0; right:0; bottom:0;
+  background:linear-gradient(180deg, rgba(30,18,8,.98), rgba(16,11,7,.99));
+  border-top:1px solid rgba(232,135,26,.22);
+  border-radius:18px 18px 0 0;
+  padding:14px 20px max(env(safe-area-inset-bottom),20px);
+  z-index:61; transform:translateY(100%);
+  transition:transform .3s cubic-bezier(.22,.8,.24,1);
+  max-width:480px; margin:0 auto;
+  box-shadow:0 -8px 40px rgba(0,0,0,.4);
+}
+#settings-sheet.open { transform:translateY(0); }
+.sheet-handle {
+  width:36px; height:3px; background:rgba(232,135,26,.3);
+  border-radius:999px; margin:0 auto 14px;
+}
+.sheet-title {
+  font-size:9px; letter-spacing:3px; text-transform:uppercase;
+  color:#6A4820; margin-bottom:14px; text-align:center;
+}
+.sheet-section {
+  display:flex; flex-direction:column; gap:8px;
+}
+.sheet-row {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:9px 12px; border-radius:10px; border:1px solid #2A1A0A;
+  background:rgba(255,255,255,.025);
+}
+.sheet-row-label {
+  font-size:11px; letter-spacing:1.5px; text-transform:uppercase;
+  color:#8A6030;
+}
+.sheet-toggle {
+  background:none; border:1px solid #4A2810; color:#8A6030;
+  border-radius:999px; padding:5px 14px; font-size:10px; letter-spacing:1.5px;
+  text-transform:uppercase; cursor:pointer; font-family:inherit;
+  transition:border-color .18s, color .18s, background .18s;
+}
+.sheet-toggle.active {
+  border-color:rgba(232,135,26,.45); color:#E8871A;
+  background:rgba(232,135,26,.12);
+}
+.sheet-toggle:active { background:#1C1008; }
+.sheet-btn {
+  background:#171009; border:1px solid #342313; color:#8E6940;
+  border-radius:10px; padding:12px; font-size:10px; letter-spacing:1.8px;
+  text-transform:uppercase; cursor:pointer; font-family:inherit; width:100%;
+  transition:transform .18s, border-color .18s, color .18s, background .18s;
+}
+.sheet-btn:hover { transform:translateY(-1px); color:#EDE0C4;
+  border-color:rgba(232,135,26,.35); background:rgba(232,135,26,.08); }
+.sheet-btn.danger { color:#8A3020; border-color:rgba(160,50,30,.4); }
+.sheet-btn.danger:hover { color:#D05050; border-color:rgba(200,50,50,.45); background:rgba(180,40,30,.09); }
+.sheet-divider { height:1px; background:rgba(255,255,255,.04); margin:4px 0; }
+.sheet-about {
+  font-size:10px; line-height:1.6; color:#5A3A18; text-align:center;
+  padding:8px 0 2px; letter-spacing:.5px;
+}
+
+/* ─── SPLASH PROGRESS BAR ─── */
+.splash-progress-wrap {
+  width:280px; height:2px; border-radius:999px;
+  background:rgba(232,135,26,.12); margin-top:18px; overflow:hidden;
+  animation:splashFade .5s .6s ease forwards; opacity:0;
+}
+.splash-progress-bar {
+  height:100%; border-radius:999px; background:#E8871A;
+  width:0%; transition:width 0.4s ease;
+}
+.splash-progress-label {
+  font-size:9px; letter-spacing:3px; text-transform:uppercase;
+  color:#5A3A18; margin-top:7px;
+  animation:splashFade .5s .65s ease forwards; opacity:0;
+}
+
+/* ─── BOARD WON TRANSITION ─── */
+#board-container { transition:filter 0.25s ease; }
+#board-container.board-won { filter:brightness(0.6); }
+
+/* ─── OVERLAY SLIDE DIRECTIONS ─── */
+#overlay {
+  transform:translateY(0);
+  transition:opacity .28s ease, transform .28s cubic-bezier(.22,.8,.24,1);
+}
+#overlay.slide-up   { transform:translateY(60px); opacity:0; }
+#overlay.slide-down { transform:translateY(-60px); opacity:0; }
+#overlay.show       { transform:translateY(0); opacity:1; }
+#overlay.fail #overlay-title { color:#D06040; }
+#overlay.fail #overlay-icon  { animation:none; }
+#overlay.fail { border-top:1px solid rgba(200,60,40,.35); }
+
+/* ─── ARC GAUGE ─── */
+.move-arc-bg   { fill:none; stroke:#2A1A08; stroke-width:4; }
+.move-arc-fill { fill:none; stroke:#E8871A; stroke-width:4;
+  stroke-linecap:round;
+  transform:rotate(-90deg); transform-origin:50% 50%;
+  transition: stroke-dashoffset 0.3s ease, stroke 0.3s ease; }
+.move-arc-num  { fill:#EDE0C4; font-size:12px; font-family:Georgia,serif;
+  text-anchor:middle; }
+.move-arc-of   { fill:#4A3010; font-size:6px; font-family:Georgia,serif;
+  text-anchor:middle; letter-spacing:1px; }
+
+/* ─── LEVEL INTRO INTERSTITIAL ─── */
+#level-intro {
+  position:fixed; inset:0; background:#0D0905; z-index:25;
+  display:flex; flex-direction:column; align-items:center;
+  justify-content:center; gap:10px;
+  opacity:0; pointer-events:none; transition:opacity .2s ease;
+}
+#level-intro.li-show { opacity:1; }
+.li-kicker { font-size:10px; letter-spacing:4px; text-transform:uppercase; color:#6A4820; }
+.li-title  { font-size:28px; color:#EDE0C4; letter-spacing:1px; }
+.li-dots   { display:flex; gap:5px; align-items:center; }
+.li-dot    { width:7px; height:7px; border-radius:50%; }
+.li-dot.filled  { background:#E8871A; }
+.li-dot.empty   { background:#2A1A08; }
+.li-mode   { font-size:9px; letter-spacing:3px; text-transform:uppercase; color:#4A3010; }
+
+/* ─── DAILY MODE BOARD GOLD BORDER ─── */
+#board-container.daily-mode canvas {
+  box-shadow:0 0 0 1.5px rgba(255,208,96,.35);
+}
+
+/* ─── ONBOARDING OVERLAY ─── */
+#onboard-overlay {
+  position:fixed; inset:0; background:#0D0905; z-index:70;
+  display:flex; flex-direction:column; align-items:center;
+  justify-content:center; gap:20px; padding:32px 24px;
+}
+#onboard-overlay.hidden { display:none; }
+#onboard-cards { width:100%; max-width:320px; position:relative; min-height:200px; }
+.ob-card {
+  position:absolute; inset:0;
+  display:flex; flex-direction:column; align-items:center;
+  justify-content:center; gap:14px; text-align:center;
+  opacity:0; pointer-events:none; transition:opacity .3s ease;
+}
+.ob-card.active { opacity:1; pointer-events:auto; }
+.ob-icon { font-size:52px; line-height:1; }
+.ob-title { font-size:24px; color:#EDE0C4; letter-spacing:1px; }
+.ob-body { font-size:13px; color:#8A6030; line-height:1.7; max-width:260px; }
+.ob-dots { display:flex; gap:8px; }
+.ob-dot { width:6px; height:6px; border-radius:50%; background:#2A1A08; transition:background .25s; }
+.ob-dot.active { background:#E8871A; }
+#ob-next {
+  background:#E8871A; border:none; color:#120A04;
+  padding:13px 40px; border-radius:9px; font-size:14px;
+  font-family:inherit; font-weight:bold; letter-spacing:1.5px;
+  cursor:pointer; min-width:180px; min-height:44px;
+}
+#ob-skip {
+  background:none; border:none; color:#4A3010;
+  font-size:11px; letter-spacing:2px; text-transform:uppercase;
+  cursor:pointer; font-family:inherit; padding:8px; min-height:44px;
+}
+
+/* ─── SWIPE HINT ─── */
+#swipe-hint {
+  position:absolute; bottom:72px; left:50%; transform:translateX(-50%);
+  font-size:9px; letter-spacing:2px; text-transform:uppercase;
+  color:#4A3010; pointer-events:none;
+  opacity:0; transition:opacity .4s;
+  white-space:nowrap;
+}
+#swipe-hint.show { opacity:1; }
+#game-wrapper { position:relative; }
+
+/* ─── OVERLAY BTN3 (hint in fail state) ─── */
+#overlay-btn3 {
+  background:none; border:none; color:#5A3A18;
+  font-size:10px; letter-spacing:1.5px; text-transform:uppercase;
+  cursor:pointer; font-family:inherit; padding:6px; display:none;
+  min-height:44px;
+}
+#overlay.fail #overlay-btn3 { display:block; }
+
+/* ─── PREFERS-REDUCED-MOTION ─── */
+@media (prefers-reduced-motion: reduce) {
+  .start-title { animation: none !important; }
+  .splash-bg-glow { animation: none !important; }
+  .splash-icon-wrap { animation: none !important; opacity:1 !important; transform:none !important; }
+  .splash-title, .splash-sub, .splash-divider,
+  .splash-progress-wrap, .splash-progress-label {
+    animation: none !important; opacity:1 !important;
+  }
+  #overlay-icon { animation: none !important; }
+  #game-wrapper.level-entering { animation: none !important; }
+  .tut-body-area { transition: none !important; }
+  #settings-sheet { transition: none !important; }
+  #level-intro { transition: none !important; }
+  .splash-progress-bar { transition: none !important; }
+}
 </style>
 </head>
 <body class="preload">
@@ -814,12 +1039,77 @@ body.preload * { transition:none !important; animation:none !important; }
   <div class="splash-title">Tiger Trap</div>
   <div class="splash-sub">Hunt · or · be · hunted</div>
   <div class="splash-divider"></div>
+  <div class="splash-progress-wrap">
+    <div class="splash-progress-bar" id="splash-bar"></div>
+  </div>
+  <div class="splash-progress-label" id="splash-label">Initialising…</div>
   <div class="splash-tap-hint">Tap to begin</div>
 </div>
 
+<!-- ══ SETTINGS SHEET ══ -->
+<div id="settings-backdrop"></div>
+<div id="settings-sheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title">Settings</div>
+  <div class="sheet-section">
+    <div class="sheet-row">
+      <span class="sheet-row-label">Sound</span>
+      <button class="sheet-toggle active" id="sheet-sound-toggle">On</button>
+    </div>
+    <div class="sheet-row">
+      <span class="sheet-row-label">Haptics</span>
+      <button class="sheet-toggle active" id="sheet-haptics-toggle">On</button>
+    </div>
+    <div class="sheet-divider"></div>
+    <button class="sheet-btn" id="sheet-howtoplay">How to Play</button>
+    <button class="sheet-btn" id="btn-levels-tiger">Tiger Levels</button>
+    <button class="sheet-btn" id="btn-levels-goat">Goat Levels</button>
+    <button class="sheet-btn danger" id="btn-reset-progress">Reset All Progress</button>
+    <div class="sheet-about">Ancient South Asian hunt game. One tiger, many goats.<br>Find the one best move.</div>
+  </div>
+</div>
+
+<!-- ══ LEVEL INTRO INTERSTITIAL ══ -->
+<div id="level-intro">
+  <div class="li-kicker" id="li-kicker">Level 1</div>
+  <div class="li-title"  id="li-title">First Trap</div>
+  <div class="li-dots"   id="li-dots"></div>
+  <div class="li-mode"   id="li-mode">Goat Mode</div>
+</div>
+
 <!-- ══ START SCREEN ══ -->
+<div id="onboard-overlay">
+  <div id="onboard-cards">
+    <div class="ob-card active" id="ob0">
+      <div class="ob-icon">🐐</div>
+      <div class="ob-title">You are the Herd</div>
+      <div class="ob-body">Place goats to surround the tiger. Block every escape. Trap it completely to win.</div>
+    </div>
+    <div class="ob-card" id="ob1">
+      <div class="ob-icon">🐯</div>
+      <div class="ob-title">Or be the Hunter</div>
+      <div class="ob-body">Move the tiger. Jump over goats to capture them. Escape the board — or take enough to win.</div>
+    </div>
+    <div class="ob-card" id="ob2">
+      <div class="ob-icon">⚡</div>
+      <div class="ob-title">One best move exists</div>
+      <div class="ob-body">Every puzzle has a par solution. Find it in fewer moves to earn your star.</div>
+    </div>
+  </div>
+  <div class="ob-dots">
+    <div class="ob-dot active"></div>
+    <div class="ob-dot"></div>
+    <div class="ob-dot"></div>
+  </div>
+  <button id="ob-next">Next →</button>
+  <button id="ob-skip">Skip</button>
+</div>
 <div class="screen" id="start-screen">
   <div class="start-glow"></div>
+  <div id="start-topbar">
+    <button class="start-icon-btn" id="btn-settings" title="Settings" aria-label="Settings">⚙️</button>
+    <button class="start-icon-btn" id="btn-sound-home" title="Sound" aria-label="Sound">🔊</button>
+  </div>
   <div class="start-title">Tiger Trap</div>
   <div class="start-sub">Two sides · One board · One best move</div>
   <div class="mode-cards">
@@ -856,17 +1146,7 @@ body.preload * { transition:none !important; animation:none !important; }
       <span id="streak-count">—</span>
     </div>
   </div>
-  <div class="start-utility-row">
-    <button class="start-utility-btn" id="btn-levels-tiger">Tiger levels</button>
-    <button class="start-utility-btn" id="btn-levels-goat">Goat levels</button>
-    <button class="start-utility-btn" id="btn-reset-progress">Reset all</button>
-  </div>
-  <div class="start-context">
-    <div class="start-context-kicker">The legend behind the game</div>
-    <div class="start-context-copy">One tiger against a herd of goats. The tiger is faster and stronger — but the goats win by closing lanes together. That tension is thousands of years old. <strong>Tiger Trap</strong> distils it into a fast, sharp puzzle you can finish in under a minute.</div>
-    <div class="start-context-copy">Play both sides. Master both minds. Every level has exactly one best path — find it.</div>
-    <div class="start-context-meta" id="launch-counts">0/50 · 0/50 cleared</div>
-  </div>
+  <div class="start-context-meta" id="launch-counts" style="font-size:9px;letter-spacing:1.3px;color:#5A3A18;text-align:center;margin-top:8px;"></div>
 </div>
 <div id="level-select">
   <div class="level-select-card">
@@ -880,33 +1160,39 @@ body.preload * { transition:none !important; animation:none !important; }
 
 <!-- ══ GAME SCREEN ══ -->
 <div class="screen hidden" id="game-screen">
-<div id="game-wrapper">
+<div id="game-wrapper" aria-live="polite" aria-atomic="false">
 
   <div id="top-bar">
-    <button class="top-btn-icon" id="btn-home" title="Home" aria-label="Home">⌂</button>
+    <button class="top-btn-icon" id="btn-home" title="Home" aria-label="Return to home">⌂</button>
     <div id="top-center">
       <div id="level-label">Level 1</div>
       <div id="goal-text">Trap in 1</div>
       <div id="coach-text"></div>
       <div id="mode-tag" class="goat">Goat</div>
     </div>
-    <button id="btn-sound" title="Sound" aria-label="Sound">🔊</button>
-    <button class="top-btn-icon" id="btn-pause" title="Pause" aria-label="Pause">⏸</button>
+    <button id="btn-sound" title="Sound" aria-label="Toggle sound">🔊</button>
+    <button class="top-btn-icon" id="btn-pause" title="Pause" aria-label="Pause game">⏸</button>
   </div>
 
   <div id="status-row">
     <div class="hud-cluster">
+      <svg class="move-arc" id="move-arc-svg" viewBox="0 0 44 44" width="44" height="44">
+        <circle class="move-arc-bg"   cx="22" cy="22" r="17" />
+        <circle class="move-arc-fill" cx="22" cy="22" r="17" id="move-arc-fill" />
+        <text   class="move-arc-num"  x="22"  y="26"         id="move-arc-num">5</text>
+        <text   class="move-arc-of"   x="22"  y="34"         id="move-arc-of">of 5</text>
+      </svg>
       <div class="hud-label" id="status-label">Goal</div>
       <div id="goat-pips"></div>
     </div>
-    <div class="hud-cluster">
+    <div class="hud-cluster" style="display:none">
       <div class="hud-label">Moves</div>
       <div id="move-meter"></div>
     </div>
     <div id="turn-pill" class="player">Your turn</div>
   </div>
 
-  <div id="board-container">
+  <div id="board-container" role="application" aria-label="Tiger Trap game board">
     <canvas id="board"></canvas>
   </div>
 
@@ -915,11 +1201,12 @@ body.preload * { transition:none !important; animation:none !important; }
   </div>
 
   <div id="bottom-bar">
-    <button class="btn btn-secondary" id="btn-reset">↺ Restart</button>
-    <button class="btn btn-primary" id="btn-hint">💡 Hint</button>
-    <button class="btn btn-primary" id="btn-undo">↩ Undo</button>
-    <button class="btn btn-secondary" id="btn-howtoplay" style="font-size:9px;letter-spacing:1px;">? Help</button>
+    <button class="btn btn-secondary" id="btn-reset" aria-label="Restart level">↺ Restart</button>
+    <button class="btn btn-primary" id="btn-hint" aria-label="Show hint">💡 Hint</button>
+    <button class="btn btn-primary" id="btn-undo" aria-label="Undo last move">↩ Undo</button>
+    <button class="btn btn-secondary" id="btn-howtoplay" style="font-size:9px;letter-spacing:1px;" aria-label="How to play">? Help</button>
   </div>
+  <div id="swipe-hint">← swipe to undo</div>
 </div>
 </div>
 
@@ -964,6 +1251,7 @@ body.preload * { transition:none !important; animation:none !important; }
   </div>
   <button id="overlay-btn">Next →</button>
   <button id="overlay-btn2">Menu</button>
+  <button id="overlay-btn3"></button>
 </div>
 
 <script>
@@ -1529,13 +1817,15 @@ function loadProgress() {
       tigerCurrent: Math.max(0, parsed.tigerCurrent || 0),
       goatCleared: Math.max(0, parsed.goatCleared || 0),
       tigerCleared: Math.max(0, parsed.tigerCleared || 0),
+      goatPar: parsed.goatPar || {},
+      tigerPar: parsed.tigerPar || {},
       tutorials: {
         goat: !!(parsed.tutorials && parsed.tutorials.goat),
         tiger: !!(parsed.tutorials && parsed.tutorials.tiger),
       },
     };
   } catch (e) {
-    return { goatUnlocked:1, tigerUnlocked:1, goatCurrent:0, tigerCurrent:0, goatCleared:0, tigerCleared:0, tutorials:{goat:false,tiger:false} };
+    return { goatUnlocked:1, tigerUnlocked:1, goatCurrent:0, tigerCurrent:0, goatCleared:0, tigerCleared:0, goatPar:{}, tigerPar:{}, tutorials:{goat:false,tiger:false} };
   }
 }
 
@@ -1584,6 +1874,12 @@ function registerCampaignWin() {
   }
   const total = getModeLevels(curMode).length;
   const nextUnlock = Math.min(total, lvlIdx + 2);
+  // Track par (best move count)
+  const parKey = curMode === 'goat' ? 'goatPar' : 'tigerPar';
+  const prev = progress[parKey][lvlIdx];
+  if (prev === undefined || S.moveCount < prev) {
+    progress[parKey][lvlIdx] = S.moveCount;
+  }
   if (curMode === 'goat') {
     progress.goatUnlocked = Math.max(progress.goatUnlocked, nextUnlock);
     progress.goatCurrent = Math.min(total-1, Math.max(progress.goatCurrent, Math.min(lvlIdx + 1, total-1)));
@@ -1647,8 +1943,19 @@ function openLevelSelect(mode) {
         typeLabel = lvl.objective === 'escape' ? '🚪 Escape' : '🐐 Capture';
       }
       const goalShort = lvl.goal || '';
+      // Par star
+      const best = progress[`${mode}Par`]?.[i];
+      let parStar = '';
+      if (cleared && best !== undefined) {
+        const isUnderPar = best < lvl.moveLimit;
+        const isPar = best <= lvl.moveLimit;
+        if (isUnderPar) parStar = '<span style="color:#FFD060;font-size:9px;"> ★</span>';
+        else if (isPar) parStar = '<span style="color:#A07838;font-size:9px;"> ★</span>';
+      } else if (cleared) {
+        parStar = '<span style="color:#4A3010;font-size:9px;"> –</span>';
+      }
       return `<button class="level-btn level-btn-mission ${locked?'locked':''} ${current?'current':''} ${cleared?'cleared':''}" ${locked?'disabled':''} data-mode="${mode}" data-level="${i}">
-        <span class="lbm-num">${i+1}</span>
+        <span class="lbm-num">${i+1}${parStar}</span>
         ${typeLabel ? `<span class="lbm-type">${typeLabel}</span>` : ''}
         <span class="lbm-sub">${goalShort}</span>
       </button>`;
@@ -1759,6 +2066,12 @@ function _getCtx() {
   return _audioCtx;
 }
 
+let _audioUnlocked = false;
+function _unlockAudio() {
+  if (_audioUnlocked || !_audioCtx) return;
+  _audioCtx.resume().then(() => { _audioUnlocked = true; }).catch(()=>{});
+}
+
 function _osc(type, freq, gainVal, dur, rampFreq, startT) {
   if (!_soundEnabled) return;
   try {
@@ -1804,20 +2117,31 @@ const SFX = {
     _noise(0.09, 0.28);
   },
   trap() {
-    try {
-      if (!_soundEnabled) return;
-      const ctx = _getCtx(); const now = ctx.currentTime;
-      // Rising arpeggio
-      [220, 330, 440, 660].forEach((f, i) => {
-        const t = now + i * 0.09;
-        _osc('sine', f, 0.35, 0.38, undefined, t);
-      });
-      // Bass thump at end
-      _osc('triangle', 110, 0.45, 0.4, 48, now + 0.28);
-    } catch(e) {}
+    if (!_soundEnabled) return;
+    const ctx = _getCtx(); const now = ctx.currentTime;
+    [[261.6, 0], [329.6, 0.18], [392.0, 0.36]].forEach(([freq, offset]) => {
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.connect(g); g.connect(_masterGain);
+      o.type = 'sine'; o.frequency.value = freq;
+      g.gain.setValueAtTime(0, now + offset);
+      g.gain.linearRampToValueAtTime(0.38, now + offset + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.001, now + offset + 0.28);
+      o.start(now + offset); o.stop(now + offset + 0.30);
+    });
   },
   fail() {
-    _osc('sawtooth', 210, 0.35, 0.44, 72);
+    if (!_soundEnabled) return;
+    const ctx = _getCtx(); const now = ctx.currentTime;
+    [[220, 0], [196, 0.16]].forEach(([freq, offset]) => {
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.connect(g); g.connect(_masterGain);
+      o.type = 'triangle'; o.frequency.value = freq;
+      g.gain.setValueAtTime(0.32, now + offset);
+      g.gain.exponentialRampToValueAtTime(0.001, now + offset + 0.38);
+      o.start(now + offset); o.stop(now + offset + 0.40);
+    });
   },
 };
 
@@ -1825,7 +2149,8 @@ const SFX = {
 //  HAPTICS
 // ==============================================================
 
-const vib = p => { try { navigator.vibrate && navigator.vibrate(p); } catch(e){} };
+let _hapticsEnabled = true;
+const vib = p => { try { if (_hapticsEnabled) { navigator.vibrate && navigator.vibrate(p); } } catch(e){} };
 const haptic = {
   tap:     () => { vib(8);             SFX.tap(); },
   move:    () => { vib(12);            SFX.move(); },
@@ -2309,11 +2634,11 @@ let isPaused = false;
 const PIECE_GLIDE_MS = 160; // duration in ms
 const glides = []; // [{fromXY, toXY, piece:'tiger'|'goat', color, start, endMs}]
 
-function startGlide(fromNode, toNode, piece) {
+function startGlide(fromNode, toNode, piece, type) {
   const from = nxy(fromNode);
   const to   = nxy(toNode);
   const now  = performance.now();
-  glides.push({ from, to, piece, start:now, end:now+PIECE_GLIDE_MS });
+  glides.push({ from, to, piece, start:now, end:now+PIECE_GLIDE_MS, isJump:(type==='jump') });
 }
 
 function drawGlides() {
@@ -2323,10 +2648,14 @@ function drawGlides() {
     const rem = g.end - now;
     if (rem <= 0) { glides.splice(i,1); continue; }
     const t = 1 - rem/PIECE_GLIDE_MS;
-    // ease-out cubic
-    const ease = 1 - Math.pow(1-t, 3);
-    const x = g.from.x + (g.to.x - g.from.x) * ease;
-    const y = g.from.y + (g.to.y - g.from.y) * ease;
+    // ease in-out
+    const ease = t < 0.5 ? 2*t*t : -1+(4-2*t)*t;
+    let x = g.from.x + (g.to.x - g.from.x) * ease;
+    let y = g.from.y + (g.to.y - g.from.y) * ease;
+    if (g.isJump) {
+      const arc = Math.sin(Math.PI * t);
+      y -= arc * cell * 0.55;
+    }
     if (g.piece === 'tiger') {
       _drawTigerAt(x, y, false);
     } else {
@@ -2397,7 +2726,20 @@ function loadLevel(idx) {
   S = mkState(lvl, curMode);
   history = []; aiHint = null; playerHint = null; isPaused = false;
 
-  const _lvlDisplay = (curRun==='campaign') ? `Level ${lvlIdx+1} · ${lvl.title||lvl.label}` : (curRun==='daily' ? 'Daily Puzzle' : 'Endless Mode');
+  // Daily mode board identity
+  const bc = document.getElementById('board-container');
+  if (bc) bc.classList.toggle('daily-mode', curRun === 'daily');
+
+  let _lvlDisplay;
+  if (curRun === 'campaign') {
+    _lvlDisplay = `Level ${lvlIdx+1} · ${lvl.title||lvl.label}`;
+  } else if (curRun === 'daily') {
+    const d = new Date();
+    const stamp = d.toLocaleDateString('en-US', { month:'short', day:'numeric' });
+    _lvlDisplay = `Daily · ${stamp}`;
+  } else {
+    _lvlDisplay = 'Endless Mode';
+  }
   document.getElementById('level-label').textContent = _lvlDisplay;
   // Build richer goal display
   let _goalDisplay = lvl.goal;
@@ -2423,6 +2765,7 @@ function loadLevel(idx) {
     wrapper.classList.add('level-entering');
     setTimeout(() => wrapper.classList.remove('level-entering'), 380);
   }
+  _maybeShowSwipeHint();
 }
 
 function snap() {
@@ -2722,12 +3065,18 @@ function execGoatMove(from, to) {
     addFlash(S.tigers[0],'rgba(80,210,80,0.85)');
     const m=S.moveCount;
     registerCampaignWin();
-    setTimeout(()=>showOverlay('🔒','Trapped!',`Solved in ${m} move${m>1?'s':''}.`,
+    const _doWinOverlay = () => showOverlay('🔒','Trapped!',`Solved in ${m} move${m>1?'s':''}.`,
       (curRun==='campaign' && lvlIdx<GOAT_LEVELS.length-1)?'Next →':'Play Again',
-      ()=>startMode(curMode, curRun==='campaign' && lvlIdx<GOAT_LEVELS.length-1 ? lvlIdx+1 : 0),
+      () => {
+        if (curRun==='campaign' && lvlIdx<GOAT_LEVELS.length-1) {
+          showLevelIntro(lvlIdx+1, () => startMode(curMode, lvlIdx+1));
+        } else { startMode(curMode, 0); }
+      },
       'Menu', showStart,
-      {mode:'goat',title:'Trapped!',moves:m,moveLimit:S.moveLimit,won:true,run:curRun}
-    ), 650);
+      {mode:'goat',title:'Trapped!',moves:m,moveLimit:S.moveLimit,won:true,run:curRun},
+      'up'
+    );
+    triggerTrapSequence(S.tigers[0], m, _doWinOverlay);
     return;
   }
 
@@ -2746,7 +3095,7 @@ function runTigerAI() {
 
   aiHint={from:tn,to:move.to};
   setTimeout(()=>{aiHint=null;},700);
-  startGlide(tn, move.to, 'tiger');
+  startGlide(tn, move.to, 'tiger', move.type==='jump' ? 'jump' : 'slide');
 
   if (move.type==='jump') {
     S.goats.splice(S.goats.indexOf(move.captured),1);
@@ -2764,7 +3113,7 @@ function runTigerAI() {
     S.phase='lost'; haptic.fail();
     trackEvent('level_fail', { mode:curMode, level:lvlIdx+1, run:curRun });
     setTimeout(()=>showOverlay('💨','Escaped','The tiger broke through.',
-      'Try Again',()=>loadLevel(lvlIdx),'Menu',showStart),420);
+      'Try Again',()=>loadLevel(lvlIdx),'Menu',showStart, null, 'down'),420);
     return;
   }
   // Fail: move limit hit
@@ -2772,7 +3121,7 @@ function runTigerAI() {
     S.phase='lost'; haptic.fail();
     trackEvent('level_fail', { mode:curMode, level:lvlIdx+1, run:curRun });
     setTimeout(()=>showOverlay('⏱','Too Slow','Tiger wasn\'t trapped in time.',
-      'Try Again',()=>loadLevel(lvlIdx),'Menu',showStart),420);
+      'Try Again',()=>loadLevel(lvlIdx),'Menu',showStart, null, 'down'),420);
   }
 }
 
@@ -2805,18 +3154,25 @@ function execTigerSlide(to) {
     S.phase='won'; triggerShake(10,400); haptic.trap();
     addFlash(to,'rgba(80,210,80,0.85)');
     registerCampaignWin();
-    setTimeout(()=>showOverlay('🏃','Escaped!','You broke free!',
+    const _doEscOverlay = () => showOverlay('🏃','Escaped!','You broke free!',
       (curRun==='campaign' && lvlIdx<TIGER_LEVELS.length-1)?'Next →':'Play Again',
-      ()=>startMode(curMode, curRun==='campaign' && lvlIdx<TIGER_LEVELS.length-1 ? lvlIdx+1 : 0),
+      () => {
+        if (curRun==='campaign' && lvlIdx<TIGER_LEVELS.length-1) {
+          showLevelIntro(lvlIdx+1, () => startMode(curMode, lvlIdx+1));
+        } else { startMode(curMode, 0); }
+      },
       'Menu',showStart,
-      {mode:'tiger',title:'Escaped!',moves:S.moveCount,moveLimit:S.moveLimit,won:true,run:curRun}
-    ),650);
+      {mode:'tiger',title:'Escaped!',moves:S.moveCount,moveLimit:S.moveLimit,won:true,run:curRun},
+      'up'
+    );
+    setTimeout(_doEscOverlay, 650);
     return;
   }
   schedGoatAI();
 }
 
 function execTigerJump(jmp) {
+  const fromNode = S.tigers[0];
   S.goats.splice(S.goats.indexOf(jmp.captured),1);
   S.capturedGoats++;
   S.tigers[0]=jmp.to; S.moveCount++;
@@ -2824,16 +3180,24 @@ function execTigerJump(jmp) {
   triggerShake(10,340); haptic.capture();
   addFlash(jmp.captured,'rgba(232,135,26,0.88)');
   refreshPips();
+  startGlide(fromNode, jmp.to, 'tiger', 'jump');
   updateHUD();
   if (S.objective==='capture_n'&&S.capturedGoats>=S.target) {
     S.phase='won'; triggerShake(14,500); haptic.trap();
     registerCampaignWin();
-    setTimeout(()=>showOverlay('🐯','Tiger!',`Captured ${S.capturedGoats} goat${S.capturedGoats>1?'s':''}!`,
+    const _captCount = S.capturedGoats;
+    const _doCapOverlay = () => showOverlay('🐯','Tiger!',`Captured ${_captCount} goat${_captCount>1?'s':''}!`,
       (curRun==='campaign' && lvlIdx<TIGER_LEVELS.length-1)?'Next →':'Play Again',
-      ()=>startMode(curMode, curRun==='campaign' && lvlIdx<TIGER_LEVELS.length-1 ? lvlIdx+1 : 0),
+      () => {
+        if (curRun==='campaign' && lvlIdx<TIGER_LEVELS.length-1) {
+          showLevelIntro(lvlIdx+1, () => startMode(curMode, lvlIdx+1));
+        } else { startMode(curMode, 0); }
+      },
       'Menu',showStart,
-      {mode:'tiger',title:'Captured!',moves:S.moveCount,moveLimit:S.moveLimit,won:true,run:curRun}
-    ),650);
+      {mode:'tiger',title:'Captured!',moves:S.moveCount,moveLimit:S.moveLimit,won:true,run:curRun},
+      'up'
+    );
+    triggerTrapSequence(S.tigers[0], S.moveCount, _doCapOverlay);
     return;
   }
   schedGoatAI();
@@ -3095,10 +3459,25 @@ function drawMovableGoatHints() {
 
 function drawNodeDots() {
   const r=Math.max(2.5,cell*.068);
+  const corners=[0,4,20,24];
+  const edgeMids=[2,10,14,22];
+  const center=12;
   for (let n=0;n<25;n++){
     const p=nxy(n);
-    ctx.beginPath(); ctx.arc(p.x,p.y,r,0,Math.PI*2);
-    ctx.fillStyle=P.nodeDot; ctx.fill();
+    if (n===center) {
+      const pulse=.5+.5*Math.sin(animT*.002);
+      ctx.beginPath(); ctx.arc(p.x,p.y,r*(1.3+pulse*.15),0,Math.PI*2);
+      ctx.fillStyle=`rgba(90,58,32,${0.7+pulse*0.3})`; ctx.fill();
+    } else if (corners.includes(n)) {
+      ctx.fillStyle='#5A3A20';
+      ctx.fillRect(p.x-2, p.y-2, 4, 4);
+    } else if (edgeMids.includes(n)) {
+      ctx.beginPath(); ctx.arc(p.x,p.y,r*1.15,0,Math.PI*2);
+      ctx.fillStyle=P.nodeDot; ctx.fill();
+    } else {
+      ctx.beginPath(); ctx.arc(p.x,p.y,r,0,Math.PI*2);
+      ctx.fillStyle=P.nodeDot; ctx.fill();
+    }
   }
 }
 
@@ -3205,6 +3584,21 @@ function updateHUD() {
   if (info) { const span=info.querySelector('[data-mv]'); if(span) span.textContent=`${left} left`; }
   if (detail) detail.textContent = `of ${limit}`;
 
+  // SVG Arc gauge (Change 5)
+  const arcFill = document.getElementById('move-arc-fill');
+  const arcNum  = document.getElementById('move-arc-num');
+  const arcOf   = document.getElementById('move-arc-of');
+  if (arcFill && arcNum) {
+    const r = 17, circ = 2 * Math.PI * r;
+    const pct = limit > 0 ? left / limit : 1;
+    arcFill.style.strokeDasharray  = circ;
+    arcFill.style.strokeDashoffset = circ * (1 - pct);
+    arcNum.textContent = left;
+    if (arcOf) arcOf.textContent = `of ${limit}`;
+    arcFill.style.stroke = pct > 0.5 ? '#E8871A' : pct > 0.25 ? '#FFD060' : '#D05030';
+  }
+
+  // Legacy pip row (hidden, kept for safety)
   const moveMeter=document.getElementById('move-meter');
   if (moveMeter) {
     const limitCount=Math.max(1, Math.min((S?.moveLimit)||0, 12));
@@ -3361,6 +3755,49 @@ canvas.addEventListener('click',e=>{const{x,y}=ppos(e);const n=nearNode(x,y);if(
 // ==============================================================
 //  OVERLAY
 // ==============================================================
+
+// CHANGE 3: Trap cinematic sequence
+function triggerTrapSequence(tigerNode, moves, callback) {
+  // Phase 1 (0-200ms): flash all neighbors
+  const neighbors = GRAPH[tigerNode] || [];
+  neighbors.forEach(n => addFlash(n, 'rgba(80,210,80,0.45)'));
+  // Phase 2 (200-450ms): dim board
+  setTimeout(() => {
+    const bc = document.getElementById('board-container');
+    if (bc) bc.classList.add('board-won');
+  }, 200);
+  // Phase 4 (600ms): restore and call callback
+  setTimeout(() => {
+    const bc = document.getElementById('board-container');
+    if (bc) bc.classList.remove('board-won');
+    callback();
+  }, 600);
+}
+
+// CHANGE 7: Level title interstitial
+function showLevelIntro(nextIdx, callback) {
+  const lvl = getActiveLevel(nextIdx);
+  const kiEl = document.getElementById('li-kicker');
+  const tiEl = document.getElementById('li-title');
+  const doEl = document.getElementById('li-dots');
+  const moEl = document.getElementById('li-mode');
+  if (kiEl) kiEl.textContent = `Level ${nextIdx + 1}`;
+  if (tiEl) tiEl.textContent = lvl.title || lvl.label || '';
+  if (moEl) moEl.textContent = curMode === 'tiger' ? '🐯 Tiger Mode' : '🐐 Goat Mode';
+  if (doEl) {
+    const diff = Math.min(8, Math.max(1, lvl.difficulty || 1));
+    const dots = Math.round(1 + (diff - 1) * 4 / 7); // map 1-8 → 1-5
+    doEl.innerHTML = Array.from({length:5},(_,i) =>
+      `<div class="li-dot ${i < dots ? 'filled' : 'empty'}"></div>`).join('');
+  }
+  const el = document.getElementById('level-intro');
+  if (!el) { callback(); return; }
+  el.classList.add('li-show');
+  setTimeout(() => {
+    el.classList.remove('li-show');
+    setTimeout(callback, 220);
+  }, 700);
+}
 
 let _cb1=null,_cb2=null;
 
@@ -3544,7 +3981,8 @@ function _copyText(text, copiedEl) {
   } catch(e) {}
 }
 
-function showOverlay(icon,title,sub,b1,cb1,b2,cb2, resultData) {
+function showOverlay(icon,title,sub,b1,cb1,b2,cb2, resultData, direction) {
+  direction = direction || 'up';
   document.getElementById('overlay-icon').textContent=icon;
   document.getElementById('overlay-title').textContent=title;
   document.getElementById('overlay-sub').textContent=sub;
@@ -3562,14 +4000,47 @@ function showOverlay(icon,title,sub,b1,cb1,b2,cb2, resultData) {
   } else {
     hideResultCard();
   }
-  document.getElementById('overlay').classList.add('show');
+  const ov = document.getElementById('overlay');
+  ov.classList.remove('fail','slide-up','slide-down');
+  if (direction === 'down') {
+    ov.classList.add('fail','slide-down');
+    // Style fail: full-width primary, small text link for btn2
+    document.getElementById('overlay-btn').style.width = '100%';
+    document.getElementById('overlay-btn2').style.cssText = 'background:none;border:none;color:#7A5020;font-size:11px;letter-spacing:1px;cursor:pointer;font-family:inherit;padding:6px 0;text-decoration:underline;';
+    const btn3 = document.getElementById('overlay-btn3');
+    if (btn3) btn3.textContent = '💡 Show hint';
+  } else {
+    ov.classList.add('slide-up');
+    document.getElementById('overlay-btn').style.width = '';
+    document.getElementById('overlay-btn2').style.cssText = '';
+  }
+  ov.setAttribute('role','dialog');
+  ov.setAttribute('aria-modal','true');
+  requestAnimationFrame(() => {
+    ov.classList.add('show');
+    ov.classList.remove('slide-up','slide-down');
+  });
+  // Auto-show share for daily wins (Change 11)
+  if (curRun==='daily' && resultData?.won) {
+    setTimeout(() => {
+      const row = document.getElementById('result-share-row');
+      if (row) row.style.display = 'flex';
+    }, 800);
+  }
 }
 function hideOverlay(){
-  document.getElementById('overlay').classList.remove('show');
+  const ov = document.getElementById('overlay');
+  ov.classList.remove('show','fail');
+  const btn3 = document.getElementById('overlay-btn3');
+  if (btn3) btn3.style.display = '';
   hideResultCard();
 }
 document.getElementById('overlay-btn').addEventListener('click',()=>{if(_cb1)_cb1();});
 document.getElementById('overlay-btn2').addEventListener('click',()=>{if(_cb2)_cb2();});
+document.getElementById('overlay-btn3')?.addEventListener('click', () => {
+  hideOverlay();
+  showHintMove();
+});
 
 
 
@@ -3591,6 +4062,58 @@ function showHintMove() {
   updateHUD();
 }
 
+
+// ==============================================================
+//  SWIPE HINT
+// ==============================================================
+function _maybeShowSwipeHint() {
+  try { if (localStorage.getItem('tt_swipe_hint')) return; } catch(e) { return; }
+  const el = document.getElementById('swipe-hint');
+  if (!el) return;
+  el.classList.add('show');
+  setTimeout(() => {
+    el.classList.remove('show');
+    try { localStorage.setItem('tt_swipe_hint','1'); } catch(e) {}
+  }, 3000);
+}
+
+// ==============================================================
+//  ONBOARDING
+// ==============================================================
+let _obStep = 0;
+function _obGoTo(i) {
+  document.querySelectorAll('.ob-card').forEach((c,j) => c.classList.toggle('active', j===i));
+  document.querySelectorAll('.ob-dot').forEach((d,j) => d.classList.toggle('active', j===i));
+  document.getElementById('ob-next').textContent = i >= 2 ? 'Play →' : 'Next →';
+  _obStep = i;
+}
+function _obDismiss() {
+  try { localStorage.setItem('tt_onboarded','1'); } catch(e) {}
+  const el = document.getElementById('onboard-overlay');
+  if (el) { el.style.opacity='0'; el.style.transition='opacity .3s';
+             setTimeout(()=>el.classList.add('hidden'), 300); }
+}
+document.getElementById('ob-next')?.addEventListener('click', () => {
+  if (_obStep < 2) _obGoTo(_obStep + 1);
+  else _obDismiss();
+});
+document.getElementById('ob-skip')?.addEventListener('click', _obDismiss);
+
+// ==============================================================
+//  VISIBILITY CHANGE (Android background pause)
+// ==============================================================
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    if (_audioCtx && _audioCtx.state === 'running') {
+      _audioCtx.suspend().catch(()=>{});
+    }
+  } else {
+    if (_audioCtx && _audioCtx.state === 'suspended') {
+      _audioCtx.resume().catch(()=>{});
+    }
+    requestAnimationFrame(render);
+  }
+});
 
 // ==============================================================
 //  SCREEN NAV
@@ -3648,12 +4171,93 @@ document.getElementById('btn-howtoplay').addEventListener('click', () => {
   openTutorial(curMode, true);
 });
 
-document.getElementById('btn-reset-progress').addEventListener('click', () => {
-  // Use overlay-style confirm to keep within game aesthetic
-  const ok = window.confirm('Reset all progress?\n\nThis will clear all campaign levels, stars and tutorial history. This cannot be undone.');
-  if (ok) resetAllProgress();
+// btn-reset-progress is in the settings sheet — handled below via sheet listener
+// (the old standalone listener is kept for the in-game top-bar button if present)
+
+// ── Settings sheet ───────────────────────────────────────────
+function openSettings() {
+  document.getElementById('settings-backdrop')?.classList.add('show');
+  document.getElementById('settings-sheet')?.classList.add('open');
+}
+function closeSettings() {
+  document.getElementById('settings-backdrop')?.classList.remove('show');
+  document.getElementById('settings-sheet')?.classList.remove('open');
+}
+const _btnSettings = document.getElementById('btn-settings');
+if (_btnSettings) _btnSettings.addEventListener('click', openSettings);
+const _settingsBackdrop = document.getElementById('settings-backdrop');
+if (_settingsBackdrop) _settingsBackdrop.addEventListener('click', closeSettings);
+
+// Sound toggle (home icon button)
+const _btnSoundHome = document.getElementById('btn-sound-home');
+if (_btnSoundHome) _btnSoundHome.addEventListener('click', () => {
+  _soundEnabled = !_soundEnabled;
+  _btnSoundHome.textContent = _soundEnabled ? '🔊' : '🔇';
+  _btnSoundHome.classList.toggle('muted', !_soundEnabled);
+  // Keep in-game sound button in sync
+  const gbtn = document.getElementById('btn-sound');
+  if (gbtn) { gbtn.textContent = _soundEnabled ? '🔊' : '🔇'; gbtn.classList.toggle('muted', !_soundEnabled); }
+  // Keep sheet sound toggle in sync
+  const sst = document.getElementById('sheet-sound-toggle');
+  if (sst) { sst.textContent = _soundEnabled ? 'On' : 'Off'; sst.classList.toggle('active', _soundEnabled); }
+  if (_soundEnabled) { _getCtx(); SFX.tap(); }
 });
 
+// Sheet sound toggle
+const _sheetSoundToggle = document.getElementById('sheet-sound-toggle');
+if (_sheetSoundToggle) _sheetSoundToggle.addEventListener('click', () => {
+  _soundEnabled = !_soundEnabled;
+  _sheetSoundToggle.textContent = _soundEnabled ? 'On' : 'Off';
+  _sheetSoundToggle.classList.toggle('active', _soundEnabled);
+  const btn = document.getElementById('btn-sound');
+  if (btn) { btn.textContent = _soundEnabled ? '🔊' : '🔇'; btn.classList.toggle('muted', !_soundEnabled); }
+  const hbtn = document.getElementById('btn-sound-home');
+  if (hbtn) { hbtn.textContent = _soundEnabled ? '🔊' : '🔇'; hbtn.classList.toggle('muted', !_soundEnabled); }
+  if (_soundEnabled) { _getCtx(); SFX.tap(); }
+});
+
+// Sheet haptics toggle
+const _sheetHapticsToggle = document.getElementById('sheet-haptics-toggle');
+if (_sheetHapticsToggle) _sheetHapticsToggle.addEventListener('click', () => {
+  _hapticsEnabled = !_hapticsEnabled;
+  _sheetHapticsToggle.textContent = _hapticsEnabled ? 'On' : 'Off';
+  _sheetHapticsToggle.classList.toggle('active', _hapticsEnabled);
+});
+
+// Sheet How to Play
+const _sheetHowToPlay = document.getElementById('sheet-howtoplay');
+if (_sheetHowToPlay) _sheetHowToPlay.addEventListener('click', () => {
+  closeSettings();
+  openTutorial(curMode || 'goat', false);
+});
+
+// Sheet Reset All
+const _sheetReset = document.getElementById('btn-reset-progress');
+if (_sheetReset) _sheetReset.addEventListener('click', () => {
+  closeSettings();
+  resetAllProgress();
+});
+
+// ── Swipe left on game-wrapper = undo ────────────────────────
+let _swipeStartX = 0, _swipeStartY = 0, _swipeStartT = 0;
+const _gameWrapper = document.getElementById('game-wrapper');
+if (_gameWrapper) {
+  _gameWrapper.addEventListener('touchstart', e => {
+    const t = e.touches[0];
+    _swipeStartX = t.clientX; _swipeStartY = t.clientY; _swipeStartT = Date.now();
+  }, { passive: true });
+  _gameWrapper.addEventListener('touchend', e => {
+    const t = e.changedTouches[0];
+    const dx = t.clientX - _swipeStartX;
+    const dy = t.clientY - _swipeStartY;
+    const dt = Date.now() - _swipeStartT;
+    const absDx = Math.abs(dx), absDy = Math.abs(dy);
+    if (dt < 400 && absDx > 60 && absDx > absDy * 1.8 && dx < 0) {
+      undoMove();
+      trackEvent('swipe_undo', { mode: curMode });
+    }
+  }, { passive: true });
+}
 
 // ==============================================================
 //  INIT
@@ -3662,36 +4266,121 @@ document.getElementById('btn-reset-progress').addEventListener('click', () => {
 let _rt=null;
 window.addEventListener('resize',()=>{clearTimeout(_rt);_rt=setTimeout(setupCanvas,80);});
 window.addEventListener('load',()=>{
-  // ── Splash screen ────────────────────────────────────────────
+  // ── Service Worker (inline blob, no external file) ────────────
+  if ('serviceWorker' in navigator) {
+    const swCode = `
+      const CACHE = 'tiger-trap-v1';
+      self.addEventListener('install', e => {
+        e.waitUntil(
+          caches.open(CACHE).then(c => c.addAll([self.location.href]))
+        );
+        self.skipWaiting();
+      });
+      self.addEventListener('activate', e => {
+        e.waitUntil(clients.claim());
+      });
+      self.addEventListener('fetch', e => {
+        e.respondWith(
+          caches.match(e.request).then(r => r || fetch(e.request))
+        );
+      });
+    `;
+    const blob = new Blob([swCode], { type: 'application/javascript' });
+    navigator.serviceWorker.register(URL.createObjectURL(blob))
+      .catch(() => {}); // silently fail if blob SW unsupported
+  }
+
+  // ── AudioContext unlock listeners (Android WebView fix) ───────
+  document.addEventListener('touchstart', _unlockAudio, { passive:true, once:true });
+  document.addEventListener('click',      _unlockAudio, { once:true });
+
+  // ── Onboarding check ─────────────────────────────────────────
+  try {
+    if (!localStorage.getItem('tt_onboarded')) {
+      // onboard-overlay starts visible (no hidden class)
+    } else {
+      document.getElementById('onboard-overlay')?.classList.add('hidden');
+    }
+  } catch(e) {
+    document.getElementById('onboard-overlay')?.classList.add('hidden');
+  }
+
+  // ── Splash screen with real preload sequence ─────────────────
   const splash = document.getElementById('splash-screen');
+  const splashBar = document.getElementById('splash-bar');
+  const splashLabel = document.getElementById('splash-label');
+  let _splashSkipped = false;
+
+  const setSplashProgress = (pct, label) => {
+    if (splashBar) splashBar.style.width = pct + '%';
+    if (splashLabel) splashLabel.textContent = label;
+  };
+
+  const minDelay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+  const hideSplash = () => {
+    _splashSkipped = true;
+    if (!splash || splash.classList.contains('fade-out')) return;
+    splash.classList.add('fade-out');
+    setTimeout(() => { if (splash) splash.style.display = 'none'; }, 580);
+  };
+
   if (splash) {
-    const hideSplash = () => {
-      if (splash.classList.contains('fade-out')) return;
-      splash.classList.add('fade-out');
-      setTimeout(() => { splash.style.display = 'none'; }, 580);
-    };
     splash.addEventListener('click', hideSplash);
-    // Auto-dismiss after 1.6s
-    setTimeout(hideSplash, 1600);
+
+    // Real preload sequence
+    const splashStart = Date.now();
+    const MIN_SPLASH_MS = 1800;
+
+    const runPreload = async () => {
+      // Step 1: Load puzzles / localStorage
+      setSplashProgress(0, 'Loading puzzles…');
+      await minDelay(0);
+      progress = loadProgress();
+      setSplashProgress(25, 'Loading puzzles…');
+      await minDelay(120);
+
+      // Step 2: Validate campaign pools
+      setSplashProgress(25, 'Checking boards…');
+      await minDelay(0);
+      validateCampaignPools();
+      setSplashProgress(55, 'Checking boards…');
+      await minDelay(80);
+
+      // Step 3: Audio warmup
+      setSplashProgress(55, 'Setting up audio…');
+      try { _getCtx(); } catch(e) {}
+      setSplashProgress(75, 'Setting up audio…');
+      await minDelay(60);
+
+      // Step 4: Canvas
+      setSplashProgress(75, 'Preparing canvas…');
+      setupCanvas();
+      setSplashProgress(90, 'Preparing canvas…');
+      await minDelay(60);
+
+      // Step 5: Ready — pad to minimum total time
+      const elapsed = Date.now() - splashStart;
+      const remaining = Math.max(0, MIN_SPLASH_MS - elapsed - 160);
+      await minDelay(remaining);
+      setSplashProgress(100, 'Ready');
+      await minDelay(160);
+
+      if (!_splashSkipped) hideSplash();
+    };
+
+    runPreload();
   }
 
   // -- Fix hover delay: remove preload class after first paint --
-  // Double-rAF ensures layout is complete before transitions enable
   requestAnimationFrame(()=>requestAnimationFrame(()=>{
     document.body.classList.remove('preload');
   }));
 
   requestAnimationFrame(()=>{
-    // Attempt portrait lock (ignored silently where unsupported)
     try { screen.orientation && screen.orientation.lock && screen.orientation.lock('portrait').catch(()=>{}); } catch(e){}
     setRunType(curRun); setupCanvas(); updateStartMeta(); renderStartProgress(); renderStreak();
     requestAnimationFrame(render);
-    // Defer expensive solver validation until browser is idle
-    if (typeof requestIdleCallback !== 'undefined') {
-      requestIdleCallback(validateCampaignPools, { timeout: 3000 });
-    } else {
-      setTimeout(validateCampaignPools, 1200);
-    }
   });
 });
 
