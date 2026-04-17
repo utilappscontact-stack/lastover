@@ -1,0 +1,2326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<meta name="theme-color" content="#0B1626" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<title>HueGlide</title>
+<style>
+/* ==========================================================
+   HUEGLIDE — A drag-a-line color puzzle game
+   Single-file prototype. No external assets.
+
+   Mechanic: drag any ROW left/right or COLUMN up/down.
+   The line shifts by whole cells and wraps around.
+   3+ connected same-color tiles pop, cascade, score chains.
+   ========================================================== */
+
+/* ---------- Reset ---------- */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  height: 100%; width: 100%; overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  user-select: none; -webkit-user-select: none;
+  touch-action: none;             /* critical: we handle gestures */
+  overscroll-behavior: none;
+}
+
+/* ---------- Root tokens ---------- */
+:root {
+  /* Tile hues — warm, vibrant, match the premium-casual reference art */
+  --c0: #FF4757;  /* red      */
+  --c1: #FF8C42;  /* orange   */
+  --c2: #FFD93D;  /* yellow   */
+  --c3: #34D399;  /* green    */
+  --c4: #60A5FA;  /* blue     */
+  --c5: #C084FC;  /* purple   */
+
+  /* Matching soft-glow shades */
+  --c0-glow: rgba(255, 71, 87, 0.55);
+  --c1-glow: rgba(255,140, 66, 0.55);
+  --c2-glow: rgba(255,217, 61, 0.55);
+  --c3-glow: rgba( 52,211,153, 0.55);
+  --c4-glow: rgba( 96,165,250, 0.55);
+  --c5-glow: rgba(192,132,252, 0.55);
+
+  /* Chrome */
+  --bg-top:   #132037;
+  --bg-mid:   #0B1626;
+  --bg-bot:   #050B15;
+  --panel:    rgba(255,255,255,0.05);
+  --panel-br: rgba(255,255,255,0.09);
+  --ink:      #FFFFFF;
+  --ink-dim:  rgba(255,255,255,0.62);
+  --ink-low:  rgba(255,255,255,0.36);
+  --accent:   #7DD3FC;   /* cyan glow */
+  --gold:     #FFD766;
+  --danger:   #FF4757;
+}
+
+/* ---------- Body / background ---------- */
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, "Helvetica Neue", Arial, sans-serif;
+  color: var(--ink);
+  background:
+    radial-gradient(ellipse 70% 50% at 50% 0%, rgba(125,211,252,0.14), transparent 60%),
+    radial-gradient(ellipse 80% 60% at 50% 110%, rgba(192,132,252,0.14), transparent 60%),
+    linear-gradient(170deg, var(--bg-top) 0%, var(--bg-mid) 55%, var(--bg-bot) 100%);
+  position: fixed; inset: 0;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+/* Subtle starfield specks */
+body::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background-image:
+    radial-gradient(1px 1px at 18% 22%, rgba(255,255,255,0.30), transparent 60%),
+    radial-gradient(1px 1px at 73% 11%, rgba(255,255,255,0.22), transparent 60%),
+    radial-gradient(1px 1px at 42% 68%, rgba(255,255,255,0.20), transparent 60%),
+    radial-gradient(1px 1px at 88% 82%, rgba(255,255,255,0.28), transparent 60%),
+    radial-gradient(1px 1px at 12% 91%, rgba(255,255,255,0.16), transparent 60%),
+    radial-gradient(1px 1px at 61% 47%, rgba(255,255,255,0.12), transparent 60%);
+  opacity: 0.85;
+}
+
+/* ---------- App shell ---------- */
+#app {
+  position: relative; width: 100%; height: 100%;
+  max-width: 520px; margin: 0 auto;
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+
+/* ---------- Screen stack ---------- */
+.screen {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+  opacity: 0; pointer-events: none;
+  transition: opacity 260ms ease;
+}
+.screen.active { opacity: 1; pointer-events: auto; }
+
+/* ==========================================================
+   HOME SCREEN
+   ========================================================== */
+.home {
+  align-items: center; justify-content: space-between;
+  padding-top: calc(env(safe-area-inset-top) + 40px);
+  padding-bottom: calc(env(safe-area-inset-bottom) + 40px);
+}
+
+.logo-wrap { text-align: center; margin-top: 7vh; }
+.logo {
+  font-size: clamp(54px, 13vw, 82px);
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  line-height: 0.9;
+  background: linear-gradient(100deg, #FF4757 0%, #FF8C42 18%, #FFD93D 36%, #34D399 54%, #60A5FA 74%, #C084FC 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 8px 32px rgba(125,211,252,0.35));
+  animation: logoPulse 3.2s ease-in-out infinite;
+}
+@keyframes logoPulse {
+  0%,100% { transform: translateY(0) scale(1); }
+  50%     { transform: translateY(-4px) scale(1.015); }
+}
+.tagline {
+  margin-top: 14px;
+  font-size: 14px; font-weight: 700;
+  color: var(--ink-dim); letter-spacing: 0.28em; text-transform: uppercase;
+}
+
+/* Home preview: a mini 4x4 board that slides forever (decorative).
+   Mirrors the in-game .stage chrome (radial glow, inset hairline, deep drop
+   shadow, cyan outline) so the home feels like a window into the real game. */
+.preview-wrap {
+  width: 78%; max-width: 280px; aspect-ratio: 1 / 1;
+  position: relative; margin: 16px auto;
+  border-radius: 24px; padding: 10px;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(125,211,252,0.10), transparent 65%),
+    linear-gradient(180deg, rgba(255,255,255,0.04), rgba(0,0,0,0.24));
+  border: 1px solid var(--panel-br);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.08),
+    0 22px 42px rgba(0,0,0,0.4),
+    0 0 0 1px rgba(125,211,252,0.05);
+  overflow: hidden;
+}
+.preview-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(4, 1fr);
+  width: 100%; height: 100%; gap: 6px;
+}
+/* Preview tiles — mirror the real .tile: same border-radius, gloss gradient,
+   inset highlights, drop shadow. Per-color glow lives on .p-tile.cN below. */
+.preview-grid .p-tile {
+  border-radius: 14px;
+  background-image:
+    radial-gradient(circle at 32% 26%, rgba(255,255,255,0.45) 0%, rgba(255,255,255,0) 42%),
+    linear-gradient(180deg, rgba(255,255,255,0.14), rgba(0,0,0,0.18));
+  box-shadow:
+    0 4px 10px rgba(0,0,0,0.35),
+    inset 0 -3px 6px rgba(0,0,0,0.22),
+    inset 0 2px 2px rgba(255,255,255,0.18);
+  animation: slideDemo 4.6s ease-in-out infinite;
+}
+/* Matches the in-game per-color glow (same box-shadow as .tile.cN) so
+   preview tiles read as "the real thing," not a mockup. */
+.p-tile.c0 { background-color: var(--c0); box-shadow: 0 4px 14px var(--c0-glow), inset 0 -3px 6px rgba(0,0,0,0.22), inset 0 2px 2px rgba(255,255,255,0.28); }
+.p-tile.c1 { background-color: var(--c1); box-shadow: 0 4px 14px var(--c1-glow), inset 0 -3px 6px rgba(0,0,0,0.22), inset 0 2px 2px rgba(255,255,255,0.28); }
+.p-tile.c2 { background-color: var(--c2); box-shadow: 0 4px 14px var(--c2-glow), inset 0 -3px 6px rgba(0,0,0,0.22), inset 0 2px 2px rgba(255,255,255,0.28); }
+.p-tile.c3 { background-color: var(--c3); box-shadow: 0 4px 14px var(--c3-glow), inset 0 -3px 6px rgba(0,0,0,0.22), inset 0 2px 2px rgba(255,255,255,0.28); }
+.p-tile.c4 { background-color: var(--c4); box-shadow: 0 4px 14px var(--c4-glow), inset 0 -3px 6px rgba(0,0,0,0.22), inset 0 2px 2px rgba(255,255,255,0.28); }
+.p-tile.c5 { background-color: var(--c5); box-shadow: 0 4px 14px var(--c5-glow), inset 0 -3px 6px rgba(0,0,0,0.22), inset 0 2px 2px rgba(255,255,255,0.28); }
+@keyframes slideDemo {
+  0%, 20%  { transform: translateX(0); }
+  40%, 60% { transform: translateX(calc(100% + 6px)); }
+  80%,100% { transform: translateX(0); }
+}
+
+/* Home action */
+.home-actions { display: flex; flex-direction: column; align-items: center; gap: 14px; margin-bottom: 10px; }
+.btn {
+  position: relative;
+  display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+  padding: 18px 40px; min-width: 200px;
+  border: none; outline: none; cursor: pointer;
+  border-radius: 999px;
+  font-family: inherit; font-weight: 900; font-size: 20px;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  color: #0B1626;
+  background: linear-gradient(180deg, #FFE58A 0%, #FFD766 55%, #E8B63F 100%);
+  box-shadow:
+    0 8px 0 #7a5b18,
+    0 14px 32px rgba(255,215,102,0.35),
+    inset 0 2px 0 rgba(255,255,255,0.55);
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+.btn:active {
+  transform: translateY(4px);
+  box-shadow:
+    0 4px 0 #7a5b18,
+    0 6px 20px rgba(255,215,102,0.25),
+    inset 0 2px 0 rgba(255,255,255,0.55);
+}
+.btn.secondary {
+  color: var(--ink);
+  background: linear-gradient(180deg, #2A4468 0%, #1B2D47 100%);
+  box-shadow: 0 6px 0 #0B1626, 0 10px 22px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1);
+}
+.btn.secondary:active { box-shadow: 0 2px 0 #0B1626, 0 4px 12px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1); }
+.btn.ghost {
+  background: transparent; color: var(--ink-dim);
+  box-shadow: none; font-size: 13px; padding: 10px 18px; min-width: 0;
+  letter-spacing: 0.16em;
+}
+.btn.ghost:active { transform: translateY(1px); box-shadow: none; }
+
+/* Home-level pill mirrors the in-game .score-pill — cyan-tinted glass,
+   so the home front door uses the same UI chrome as the game topbar. */
+.home-level {
+  display: inline-flex; align-items: center; gap: 10px;
+  padding: 8px 18px; border-radius: 999px;
+  background: linear-gradient(180deg, rgba(125,211,252,0.14), rgba(125,211,252,0.04));
+  border: 1px solid rgba(125,211,252,0.3);
+  color: var(--ink); font-size: 13px; letter-spacing: 0.14em; text-transform: uppercase;
+}
+.home-level b { color: var(--gold); }
+
+/* ==========================================================
+   GAME SCREEN
+   ========================================================== */
+.game { padding: env(safe-area-inset-top) 14px env(safe-area-inset-bottom); }
+
+.topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 2px 6px;
+  gap: 10px;
+}
+.icon-btn {
+  width: 40px; height: 40px; border: none; border-radius: 12px;
+  background: var(--panel); color: var(--ink);
+  font-size: 20px; font-weight: 900; cursor: pointer;
+  display: grid; place-items: center;
+  border: 1px solid var(--panel-br);
+  transition: transform 120ms ease;
+}
+.icon-btn:active { transform: scale(0.92); }
+
+.score-pill {
+  display: inline-flex; flex-direction: column; align-items: center;
+  padding: 6px 16px; border-radius: 999px;
+  background: linear-gradient(180deg, rgba(125,211,252,0.14), rgba(125,211,252,0.04));
+  border: 1px solid rgba(125,211,252,0.3);
+  min-width: 92px;
+}
+.score-pill .lbl { font-size: 10px; letter-spacing: 0.22em; color: var(--ink-dim); text-transform: uppercase; }
+.score-pill .val { font-size: 20px; color: var(--ink); font-weight: 900; line-height: 1.1; }
+
+.moves-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 14px 8px 10px; border-radius: 999px;
+  background: linear-gradient(180deg, #1f365a, #152743);
+  border: 1px solid rgba(255,215,102,0.35);
+  font-size: 16px; font-weight: 900;
+  min-width: 70px; justify-content: center;
+}
+.moves-pill svg { width: 14px; height: 14px; }
+.moves-pill.low { color: var(--danger); border-color: rgba(255, 71, 87, 0.55); animation: pulseLow 0.9s ease-in-out infinite; }
+@keyframes pulseLow {
+  0%,100% { transform: scale(1); }
+  50%     { transform: scale(1.06); }
+}
+
+/* Chain banner (slides in on cascade ≥ 2) */
+.chain-banner {
+  position: absolute; top: 64px; right: 14px;
+  padding: 6px 12px; border-radius: 999px;
+  background: linear-gradient(90deg, var(--c1), var(--c2));
+  color: #0B1626; font-weight: 900; font-size: 13px;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  box-shadow: 0 8px 18px rgba(255,140,66,0.4);
+  opacity: 0; transform: translateY(-8px) scale(0.85);
+  transition: all 240ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  pointer-events: none;
+  z-index: 3;
+}
+.chain-banner.on { opacity: 1; transform: translateY(0) scale(1); }
+
+/* Targets row */
+.targets {
+  display: flex; align-items: center; justify-content: center;
+  gap: 14px; margin: 2px 0 8px;
+  padding: 10px 14px;
+  background: var(--panel); border: 1px solid var(--panel-br);
+  border-radius: 18px;
+  min-height: 54px;
+}
+.target { display: flex; align-items: center; gap: 8px; font-size: 17px; font-weight: 900; }
+.target .t-orb {
+  width: 26px; height: 26px; border-radius: 8px;
+  box-shadow: inset 0 -2px 0 rgba(0,0,0,0.2), inset 0 2px 0 rgba(255,255,255,0.4);
+}
+.target.done { color: var(--ink-dim); }
+.target.done .t-orb { filter: grayscale(0.85) brightness(0.65); }
+.target .t-check { display: none; width: 16px; height: 16px; color: var(--c3); }
+.target.done .t-check { display: inline-block; }
+.target.done .t-count { text-decoration: line-through; }
+
+/* Stage */
+.stage-wrap { flex: 1; display: flex; align-items: center; justify-content: center; padding: 4px 0; position: relative; }
+.stage {
+  position: relative;
+  width: 100%; max-width: 420px;
+  aspect-ratio: 6 / 7;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(125,211,252,0.10), transparent 65%),
+    linear-gradient(180deg, rgba(255,255,255,0.04), rgba(0,0,0,0.24));
+  border-radius: 24px;
+  border: 1px solid var(--panel-br);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.08),
+    0 22px 42px rgba(0,0,0,0.4),
+    0 0 0 1px rgba(125,211,252,0.05);
+  padding: 10px;
+  overflow: hidden;
+}
+
+.board { position: relative; width: 100%; height: 100%; }
+
+/* SVG guideline overlay */
+.guide-svg {
+  position: absolute; inset: 10px;
+  width: calc(100% - 20px); height: calc(100% - 20px);
+  pointer-events: none;
+  overflow: visible;
+  z-index: 2;
+}
+
+/* Individual tile — rounded squares (matching reference art) */
+.tile {
+  position: absolute;
+  border-radius: 14px;
+  cursor: grab;
+  /* Separate transitions so drag updates can be snappy */
+  transition:
+    left 260ms cubic-bezier(0.22, 1, 0.36, 1),
+    top  340ms cubic-bezier(0.34, 1.2, 0.64, 1),
+    background-color 220ms ease,
+    opacity 220ms ease,
+    transform 180ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  will-change: transform, left, top;
+  /* glossy face */
+  background-image:
+    radial-gradient(circle at 32% 26%, rgba(255,255,255,0.45) 0%, rgba(255,255,255,0) 42%),
+    linear-gradient(180deg, rgba(255,255,255,0.14), rgba(0,0,0,0.18));
+  box-shadow:
+    0 4px 10px rgba(0,0,0,0.35),
+    inset 0 -3px 6px rgba(0,0,0,0.22),
+    inset 0 2px 2px rgba(255,255,255,0.18);
+}
+.tile.c0 { background-color: var(--c0); box-shadow: 0 4px 14px var(--c0-glow), inset 0 -3px 6px rgba(0,0,0,0.22), inset 0 2px 2px rgba(255,255,255,0.28); }
+.tile.c1 { background-color: var(--c1); box-shadow: 0 4px 14px var(--c1-glow), inset 0 -3px 6px rgba(0,0,0,0.22), inset 0 2px 2px rgba(255,255,255,0.28); }
+.tile.c2 { background-color: var(--c2); box-shadow: 0 4px 14px var(--c2-glow), inset 0 -3px 6px rgba(0,0,0,0.22), inset 0 2px 2px rgba(255,255,255,0.28); }
+.tile.c3 { background-color: var(--c3); box-shadow: 0 4px 14px var(--c3-glow), inset 0 -3px 6px rgba(0,0,0,0.22), inset 0 2px 2px rgba(255,255,255,0.28); }
+.tile.c4 { background-color: var(--c4); box-shadow: 0 4px 14px var(--c4-glow), inset 0 -3px 6px rgba(0,0,0,0.22), inset 0 2px 2px rgba(255,255,255,0.28); }
+.tile.c5 { background-color: var(--c5); box-shadow: 0 4px 14px var(--c5-glow), inset 0 -3px 6px rgba(0,0,0,0.22), inset 0 2px 2px rgba(255,255,255,0.28); }
+
+/* While a tile is being dragged, disable left/top transition for instant feel */
+.tile.dragging,
+.tile.is-line-member {
+  transition: background-color 220ms ease, transform 180ms cubic-bezier(0.34, 1.56, 0.64, 1), opacity 220ms ease;
+}
+
+/* Ghost tile — clone used at ±line-length during drag to show wrap */
+.tile.ghost {
+  pointer-events: none;
+  opacity: 1;
+  transition: none;
+}
+
+/* Spawn drop-in */
+.tile.spawning { animation: spawnDrop 380ms cubic-bezier(0.34, 1.3, 0.64, 1) both; }
+@keyframes spawnDrop {
+  0%   { transform: translateY(-90px) scale(0.6); opacity: 0; }
+  60%  { opacity: 1; }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+/* Pop animation */
+.tile.popping {
+  animation: popOut 280ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  pointer-events: none;
+  z-index: 4;
+}
+@keyframes popOut {
+  0%   { transform: scale(1) rotate(0); opacity: 1; }
+  35%  { transform: scale(1.25) rotate(6deg); opacity: 1; filter: brightness(1.5); }
+  100% { transform: scale(0) rotate(28deg); opacity: 0; }
+}
+
+/* Stone obstacle */
+.tile.stone {
+  background-image:
+    radial-gradient(circle at 32% 26%, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0) 42%),
+    linear-gradient(180deg, rgba(255,255,255,0.06), rgba(0,0,0,0.3));
+  background-color: #556071;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.45), inset 0 -3px 6px rgba(0,0,0,0.3), inset 0 2px 2px rgba(255,255,255,0.1);
+  cursor: default;
+  /* Stones CAN be on a slide line — they move with the row/col, but cannot START a drag themselves */
+}
+.tile.stone::after {
+  content: attr(data-hp);
+  position: absolute; inset: 0;
+  display: grid; place-items: center;
+  color: #fff; font-weight: 900; font-size: 20px;
+  text-shadow: 0 2px 3px rgba(0,0,0,0.7);
+}
+.tile.stone.hit { animation: stoneHit 260ms ease; }
+@keyframes stoneHit {
+  0%, 100% { transform: translate(0,0); }
+  20% { transform: translate(-3px, 2px); }
+  40% { transform: translate( 3px,-1px); }
+  60% { transform: translate(-2px, 1px); }
+  80% { transform: translate( 2px, 0); }
+}
+
+/* Particle burst */
+.particle {
+  position: absolute; width: 10px; height: 10px; border-radius: 3px;
+  pointer-events: none;
+  animation: particleFly 650ms cubic-bezier(0.3, 0.9, 0.6, 1) forwards;
+  will-change: transform, opacity;
+  z-index: 5;
+}
+@keyframes particleFly {
+  0%   { transform: translate(0,0) scale(1) rotate(0); opacity: 1; }
+  100% { transform: var(--p-end) scale(0.2) rotate(var(--p-rot)); opacity: 0; }
+}
+
+/* Floating +score */
+.pop-score {
+  position: absolute;
+  font-size: 18px; font-weight: 900;
+  color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.6);
+  pointer-events: none;
+  animation: popScoreFloat 800ms cubic-bezier(0.2, 1, 0.4, 1) forwards;
+  z-index: 6;
+}
+@keyframes popScoreFloat {
+  0%   { transform: translate(-50%, 0) scale(0.8); opacity: 0; }
+  20%  { opacity: 1; transform: translate(-50%, -8px) scale(1.1); }
+  100% { transform: translate(-50%, -48px) scale(1); opacity: 0; }
+}
+
+/* Combo text centered */
+.combo-text {
+  position: absolute; top: 38%; left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 44px; font-weight: 900;
+  letter-spacing: -0.02em;
+  pointer-events: none;
+  animation: comboFloat 960ms cubic-bezier(0.2, 1, 0.4, 1) forwards;
+  text-shadow: 0 3px 14px rgba(0,0,0,0.5);
+  white-space: nowrap;
+  z-index: 7;
+}
+@keyframes comboFloat {
+  0%   { transform: translate(-50%,  10%) scale(0.55); opacity: 0; }
+  22%  { transform: translate(-50%,  -4%) scale(1.22); opacity: 1; }
+  78%  { transform: translate(-50%, -38%) scale(1.0 ); opacity: 1; }
+  100% { transform: translate(-50%, -78%) scale(0.92); opacity: 0; }
+}
+
+/* ==========================================================
+   TUTORIAL OVERLAY
+   ========================================================== */
+.tutorial-overlay {
+  position: absolute; inset: 0;
+  background: rgba(11, 22, 38, 0.82);
+  backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 24px; text-align: center; z-index: 20;
+  opacity: 0; pointer-events: none; transition: opacity 260ms ease;
+}
+.tutorial-overlay.on { opacity: 1; pointer-events: auto; }
+
+/* L1 tutorial arrow — inline with the board, pointing along row 3.
+   Hidden by default; `.on` reveals it (added by startLevel for id=1 after
+   the tutorial card dismisses). Removed on first pointerdown. */
+.l1-arrow {
+  position: absolute;
+  inset: 6px;            /* match the board's stage padding */
+  width: calc(100% - 12px);
+  height: calc(100% - 12px);
+  z-index: 15;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+.l1-arrow.on { opacity: 1; }
+.l1-arrow path {
+  stroke: var(--accent);
+  filter: drop-shadow(0 0 6px var(--accent)) drop-shadow(0 0 2px rgba(255,255,255,0.6));
+}
+.l1-arrow .arrow-pulse {
+  transform-origin: center;
+  animation: l1ArrowPulse 1.4s ease-in-out infinite;
+}
+@keyframes l1ArrowPulse {
+  0%, 100% { opacity: 0.55; transform: translateX(-3%); }
+  50%      { opacity: 1;    transform: translateX( 3%); }
+}
+
+/* Scripted target — rainbow orb with a "!" glyph and "match" label,
+   used only for L1's scripted tutorial target. */
+.t-orb-scripted {
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; font-weight: 900; color: #fff;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.45);
+}
+.t-count-scripted {
+  font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase;
+}
+.tutorial-card { max-width: 320px; display: flex; flex-direction: column; align-items: center; gap: 18px; }
+.tutorial-hand {
+  width: 90px; height: 90px;
+  animation: handSlide 1.8s ease-in-out infinite;
+  filter: drop-shadow(0 6px 14px rgba(0,0,0,0.4));
+}
+@keyframes handSlide {
+  0%, 100% { transform: translateX(-26px); }
+  50%      { transform: translateX( 26px); }
+}
+.tutorial-title { font-size: 28px; font-weight: 900; letter-spacing: -0.01em; }
+.tutorial-body  { font-size: 15px; font-weight: 600; color: var(--ink-dim); line-height: 1.5; }
+
+/* ==========================================================
+   MODALS
+   ========================================================== */
+.modal {
+  position: absolute; inset: 0;
+  background: rgba(5, 11, 21, 0.86);
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px; z-index: 30;
+  opacity: 0; pointer-events: none; transition: opacity 320ms ease;
+}
+.modal.on { opacity: 1; pointer-events: auto; }
+
+.card {
+  width: 100%; max-width: 340px;
+  padding: 28px 24px 24px;
+  background: linear-gradient(180deg, #1F3558 0%, #0F1D33 100%);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 28px;
+  box-shadow: 0 30px 60px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.1);
+  text-align: center;
+  transform: scale(0.85) translateY(20px);
+  transition: transform 360ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.modal.on .card { transform: scale(1) translateY(0); }
+.card h2 {
+  font-size: 34px; font-weight: 900; letter-spacing: -0.02em;
+  margin-bottom: 6px;
+}
+.card.win h2  { background: linear-gradient(135deg, #FFD93D, #34D399, #60A5FA); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.card.fail h2 { color: var(--danger); }
+.card p { font-size: 15px; color: var(--ink-dim); font-weight: 600; margin-bottom: 16px; }
+
+.win-stats {
+  display: flex; justify-content: center; gap: 18px;
+  margin: 4px 0 12px;
+}
+.win-stat {
+  display: flex; flex-direction: column; align-items: center;
+  padding: 8px 14px; border-radius: 14px;
+  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);
+  min-width: 70px;
+}
+.win-stat .lbl { font-size: 10px; letter-spacing: 0.2em; color: var(--ink-dim); text-transform: uppercase; }
+.win-stat .val { font-size: 22px; font-weight: 900; color: var(--ink); }
+
+.stars { display: flex; justify-content: center; gap: 8px; margin: 14px 0 18px; }
+.stars svg { width: 52px; height: 52px; }
+.star-slot { opacity: 0.18; transition: opacity 200ms; }
+.star-slot.on {
+  opacity: 1;
+  filter: drop-shadow(0 6px 14px rgba(255,215,102,0.55));
+  animation: starPop 500ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+.star-slot.on:nth-child(1) { animation-delay: 120ms; }
+.star-slot.on:nth-child(2) { animation-delay: 280ms; }
+.star-slot.on:nth-child(3) { animation-delay: 440ms; }
+@keyframes starPop {
+  0%   { transform: scale(0) rotate(-30deg); opacity: 0; }
+  60%  { transform: scale(1.25) rotate(10deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0); opacity: 1; }
+}
+
+.card .btn-row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+.card .btn { padding: 14px 22px; font-size: 16px; min-width: 120px; }
+
+.perfect-badge {
+  display: inline-block;
+  padding: 6px 14px; border-radius: 999px;
+  background: linear-gradient(135deg, #FF8C42, #FFD93D);
+  color: #0B1626; font-weight: 900; font-size: 12px;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  margin-bottom: 8px;
+  box-shadow: 0 6px 16px rgba(255,215,102,0.4);
+  animation: perfectWobble 1.6s ease-in-out infinite;
+}
+@keyframes perfectWobble {
+  0%,100%{ transform: rotate(-2deg); }
+  50%    { transform: rotate( 2deg); }
+}
+
+/* Confetti */
+.confetti {
+  position: absolute; top: -10px; width: 8px; height: 14px;
+  animation: confettiFall 1.8s linear forwards;
+  pointer-events: none;
+  border-radius: 2px;
+}
+@keyframes confettiFall {
+  0%   { transform: translateY(-20px) rotate(0); opacity: 1; }
+  100% { transform: translateY(110vh) rotate(720deg); opacity: 0.6; }
+}
+
+.hint {
+  color: var(--ink-low); font-size: 11px; font-weight: 700;
+  letter-spacing: 0.22em; text-transform: uppercase;
+  text-align: center; padding: 6px 0 0;
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- =========================== HOME =========================== -->
+  <section id="screen-home" class="screen active home">
+
+    <div class="logo-wrap">
+      <div class="logo">HueGlide</div>
+      <div class="tagline">slide · wrap · pop</div>
+    </div>
+
+    <!-- Decorative mini preview -->
+    <div class="preview-wrap" aria-hidden="true">
+      <div class="preview-grid" id="preview-grid"></div>
+    </div>
+
+    <div class="home-actions">
+      <button class="btn" id="btn-play">Play</button>
+      <div class="home-level">Level <b id="home-level-num">1</b></div>
+      <button class="btn ghost" id="btn-reset-progress">reset progress</button>
+    </div>
+  </section>
+
+  <!-- =========================== GAME =========================== -->
+  <section id="screen-game" class="screen game">
+
+    <div class="topbar">
+      <button class="icon-btn" id="btn-home" aria-label="Back to home">✕</button>
+
+      <div class="score-pill">
+        <div class="lbl">Score</div>
+        <div class="val" id="score-value">0</div>
+      </div>
+
+      <div class="moves-pill" id="moves-pill" aria-label="Moves remaining">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 12h16"/><path d="M16 6l6 6-6 6"/><path d="M8 6l-6 6 6 6"/>
+        </svg>
+        <span id="moves-value">15</span>
+      </div>
+    </div>
+
+    <div class="level-row" style="display:flex;justify-content:center;margin-bottom:6px;">
+      <span style="padding:4px 14px;border-radius:999px;background:var(--panel);border:1px solid var(--panel-br);font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:var(--ink-dim);">
+        Level <b style="color:var(--ink);" id="game-level-num">1</b>
+      </span>
+    </div>
+
+    <div class="targets" id="targets"></div>
+
+    <div class="stage-wrap">
+      <div class="chain-banner" id="chain-banner">Chain ×2</div>
+      <div class="stage" id="stage">
+        <div class="board" id="board"></div>
+        <svg class="guide-svg" id="guide-svg" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
+
+        <!-- L1 tutorial arrow: points at row 3, suggesting a rightward drag.
+             Shown only on level 1 after the tutorial card is dismissed, and
+             hidden on the first pointerdown. Uses the same 0..100 viewBox /
+             preserveAspectRatio="none" trick as guide-svg so it aligns with
+             the board grid regardless of aspect. -->
+        <svg class="l1-arrow" id="l1-arrow" viewBox="0 0 100 100" preserveAspectRatio="none">
+          <g class="arrow-pulse">
+            <!-- Row 3 is the 4th of 7 rows, so y = (3.5 / 7) * 100 = 50 -->
+            <path d="M 12 50 L 82 50 M 82 50 L 72 43 M 82 50 L 72 57"
+                  stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+          </g>
+        </svg>
+
+        <!-- Tutorial overlay -->
+        <div class="tutorial-overlay" id="tutorial">
+          <div class="tutorial-card">
+            <svg class="tutorial-hand" viewBox="0 0 64 64" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M24 40V18a4 4 0 018 0v18"/>
+              <path d="M32 28a4 4 0 018 0v10"/>
+              <path d="M40 32a4 4 0 018 0v12c0 8-6 14-14 14h-2c-6 0-10-4-12-8l-6-10a4 4 0 016-5l4 4"/>
+              <path d="M14 8l12 0M18 4l-4 4 4 4" opacity="0.8"/>
+              <path d="M50 8l-12 0M46 4l4 4 -4 4" opacity="0.8"/>
+            </svg>
+            <div class="tutorial-title">Slide a row or column</div>
+            <div class="tutorial-body">
+              Drag any <b>row</b> left/right or <b>column</b> up/down.
+              Tiles wrap around — line up <b>3 or more</b> same colors to pop them!
+            </div>
+            <button class="btn" id="btn-tutorial-ok">Got it</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="hint">drag a row or column · wrap to match 3+</div>
+  </section>
+
+  <!-- =========================== WIN =========================== -->
+  <div class="modal" id="modal-win">
+    <div class="card win">
+      <div id="win-perfect-wrap"></div>
+      <h2 id="win-title">Level Clear!</h2>
+      <p id="win-subtitle">Nicely done.</p>
+      <div class="stars" id="win-stars">
+        <svg class="star-slot" viewBox="0 0 24 24" fill="#FFD766"><path d="M12 2l3 7h7l-5.5 4 2 7L12 16l-6.5 4 2-7L2 9h7z"/></svg>
+        <svg class="star-slot" viewBox="0 0 24 24" fill="#FFD766"><path d="M12 2l3 7h7l-5.5 4 2 7L12 16l-6.5 4 2-7L2 9h7z"/></svg>
+        <svg class="star-slot" viewBox="0 0 24 24" fill="#FFD766"><path d="M12 2l3 7h7l-5.5 4 2 7L12 16l-6.5 4 2-7L2 9h7z"/></svg>
+      </div>
+      <div class="win-stats">
+        <div class="win-stat"><div class="lbl">Score</div><div class="val" id="win-score">0</div></div>
+        <div class="win-stat"><div class="lbl">Best Chain</div><div class="val" id="win-chain">0</div></div>
+      </div>
+      <div class="btn-row">
+        <button class="btn secondary" id="btn-win-home">Home</button>
+        <button class="btn" id="btn-win-next">Next</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================== FAIL =========================== -->
+  <div class="modal" id="modal-fail">
+    <div class="card fail">
+      <h2>Out of Moves</h2>
+      <p>So close! Look for longer slides that clear more tiles at once.</p>
+      <div class="btn-row">
+        <button class="btn secondary" id="btn-fail-home">Home</button>
+        <button class="btn" id="btn-fail-retry">Retry</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ==========================================================
+   HUEGLIDE — GAME LOGIC
+   ========================================================== */
+
+/* ---------- Config ---------- */
+const COLS = 6;
+const ROWS = 7;
+const MATCH_MIN = 3;
+const DRAG_DEADZONE = 8; // px before axis is locked
+
+/* ---------- DOM refs ---------- */
+const $  = (id) => document.getElementById(id);
+const board       = $('board');
+const stage       = $('stage');
+const scoreEl     = $('score-value');
+const movesEl     = $('moves-value');
+const movesPill   = $('moves-pill');
+const targetsEl   = $('targets');
+const tutorial    = $('tutorial');
+const chainBanner = $('chain-banner');
+
+/* ---------- Persistent progress ---------- */
+const STORAGE_KEY = 'hueglide.progress.v1';
+const progress = loadProgress();
+
+function loadProgress() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return { currentLevel: 1, stars: {}, bestScore: {}, failCount: {} };
+    const p = JSON.parse(raw);
+    // Forward-compat: older saves don't have failCount
+    if (!p.failCount) p.failCount = {};
+    return p;
+  } catch { return { currentLevel: 1, stars: {}, bestScore: {}, failCount: {} }; }
+}
+function saveProgress() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(progress)); } catch {}
+}
+
+/* ==========================================================
+   LEVELS — hand-authored, 30 levels across 4 arcs.
+
+   Color indices (referenced by color-specific targets):
+     0 = red    1 = orange   2 = yellow
+     3 = green  4 = blue     5 = purple
+
+   Fields:
+     id          — level number (1..30)
+     colors      — K, the color count (4, 5, or 6)
+     moves       — move budget
+     targets     — array of { type, color?, count }
+                   type = 'any'     → any popped tile counts
+                   type = 'color'   → only matching-color pops count
+                   type = 'scripted'→ level wins on the first match of 3+
+                                      (count:1 is used so the generic
+                                      targetsComplete check still works)
+     stones      — number of stones placed on the board (0 for no stones)
+     stoneHp     — HP of each stone (1 or 2)
+     intro       — if true, the "Slide a row or column" tutorial shows
+     presetBoard — optional 7×6 array of { type, color?, hp? } cells.
+                   When present, generateBoard() uses this verbatim instead
+                   of generating a random board. Stones inside a preset
+                   are { type:'stone', hp:N } and override `stones`/`stoneHp`
+                   as far as placement is concerned.
+
+   Yield table used when computing M (tiles cleared per strategic slide,
+   with best-of-7 AI sampling, then × 0.40 human cushion):
+     K=4: 219.06   K=5: 78.24   K=6: 33.27
+   Stone penalty (linear, per stone regardless of HP for this coarse model):
+     E_effective = E × (1 − O × 0.224)
+   S_factor by difficulty tier:
+     0.45 → 0.95     0.60 → 0.88     0.75 → 0.78     0.90 → 0.65
+   Color-target effective yield = E_effective / K
+   Formula: M = max(3, ceil(T / (E × S_factor × 0.40)))
+   Budgets below show `formula=X, tuned=Y (+Δ)` when Y deviates from X,
+   and note the design reason.
+   ========================================================== */
+const LEVELS = [
+
+  /* ============================================================
+     ARC 1 — ONBOARDING (L1–L7)
+     Target win rate ~90%, session 30–60s.
+     Teaches: slides wrap, 3+ pops, cascades happen.
+     K=4 throughout → cascades feel automatic, the player's first
+     impression is "wow, things just happen when I drag."
+     ============================================================ */
+
+  /* L1 — Scripted tutorial. First-match moment.
+     The only authored slide in the whole game: row 3 right-by-1 puts
+     3 greens in a row at cols 0–1–2. A cyan arrow overlay points at
+     row 3 after the tutorial card dismisses. Target is 'scripted', so
+     the level wins on whatever the first match ends up being — if the
+     player cascades into more, great, but one 3-match is enough. */
+  {
+    id: 1, colors: 4, moves: 5, stones: 0, stoneHp: 1, intro: true,
+    targets: [{ type: 'scripted', count: 1 }],
+    presetBoard: (() => {
+      // K=4 palette: 0=R 1=O 2=Y 3=G. Row 3 is the tutorial row:
+      // [G, G, O, Y, R, G] — slide right 1 → [G, G, G, O, Y, R].
+      // All other rows are a non-matching RO Y R O Y stripe.
+      const R=0, O=1, Y=2, G=3;
+      const rows = [
+        [R, O, Y, R, O, Y],
+        [O, Y, R, O, Y, R],
+        [Y, R, O, Y, R, O],
+        [G, G, O, Y, R, G],  // ← intended slide: row 3 right 1
+        [R, O, Y, R, O, Y],
+        [O, Y, R, O, Y, R],
+        [Y, R, O, Y, R, O],
+      ];
+      return rows.map(row => row.map(c => ({ type: 'normal', color: c })));
+    })(),
+  },
+
+  /* L2 — First any-color target. Preset guarantees a vertical 3-match.
+     Col 2 reads [Y, R, G, R, O, Y, Y]. Slide col 2 UP by 1 →
+     [R, G, R, O, Y, Y, Y] with a 3-match at rows 4–5–6.
+     Formula: K=4, any, T=10, S=0.45 → M_formula=max(3, ceil(10/83.22))=3.
+     Tuned: 5 (+2, session duration floor of 30s needs ≥5 slides).
+     cascadeCap 4: a full 42-tile K=4 board always has SOME slide whose
+     gravity ripples into a chain ×10+. Pre-patch, that auto-won the
+     level. Cap = 4 keeps the chain banner maxed at ×4, and any
+     still-valid matches after cap simply roll into the player's next
+     slide (they pop as that turn's cascade-1, which reads as intentional). */
+  {
+    id: 2, colors: 4, moves: 5, stones: 0, stoneHp: 1, intro: false, cascadeCap: 4,
+    targets: [{ type: 'any', count: 10 }],
+    presetBoard: (() => {
+      const R=0, O=1, Y=2, G=3;
+      const rows = [
+        [R, O, Y, G, R, O],
+        [Y, G, R, O, Y, G],
+        [R, O, G, G, R, O],
+        [Y, G, R, O, Y, G],
+        [R, O, O, G, R, O],
+        [Y, G, Y, O, Y, G],  // ← with row 6 below, Y Y vertical seed at col 2
+        [R, O, Y, G, R, O],
+      ];
+      return rows.map(row => row.map(c => ({ type: 'normal', color: c })));
+    })(),
+  },
+
+  /* L3 — Bigger match, but NOW carefully de-aligned. Preset row 3 reads
+     [G, G, Y, O, G, G] — slide LEFT 2 produces [Y, O, G, G, G, G], a clean
+     4-match at cols 2–5. Multiple valid slides still exist (left-1 and
+     right-1 each make 3-matches), so the player has agency.
+
+     Previously, rows 0/2/4/6 were all identical [R, O, Y, G, R, O] and
+     rows 1/5 were [Y, G, R, O, Y, G]. That meant a single row-3 slide
+     spawned THREE simultaneous clusters (4 Gs + 3 Rs at col 0 + 3 Os at
+     col 1 + 2 bonus Gs at col 3 = 12 tiles popped in one iteration on
+     L3 alone — effectively auto-winning the level in one move).
+
+     New rows 2/4 use [Y, O, R, Y, R, Y] and rows 1/5 use [O, R, Y, O, Y, O]
+     so that whatever row 3 slides in does NOT line up into vertical triples
+     with its neighbors. Worst case across all three intended slides is 6
+     tiles (right-1: 3 Gs + 3 Ys bonus) — a satisfying combo, not a
+     level-clearing avalanche. Tuned: 6 moves. */
+  {
+    id: 3, colors: 4, moves: 6, stones: 0, stoneHp: 1, intro: false, cascadeCap: 4,
+    targets: [{ type: 'any', count: 14 }],
+    presetBoard: (() => {
+      const R=0, O=1, Y=2, G=3;
+      const rows = [
+        [R, Y, O, Y, O, R],
+        [O, R, Y, R, Y, O],   // ← col-3 is R (not O) so gravity on RIGHT 1
+                              //   slide won't drop an O onto a latent O-triple
+        [Y, O, R, Y, R, Y],
+        [G, G, Y, O, G, G],   // ← intended: row 3 left-2 → clean 4-match
+        [R, Y, O, Y, O, R],
+        [O, R, Y, O, Y, O],
+        [Y, O, R, Y, R, Y],
+      ];
+      return rows.map(row => row.map(c => ({ type: 'normal', color: c })));
+    })(),
+  },
+
+  /* L4 — First random board at K=4. Player is off the rails now.
+     Formula: K=4, any, T=18, S=0.45 → M_formula=3.
+     Tuned: 6 (+3, duration; K=4 means most slides do something).
+     cascadeCap 4: random K=4 boards can yield 30–50-tile single slides
+     through gravity chain reactions; cap keeps the chain banner at ×4
+     max and lets natural play feel rewarding without feeling broken. */
+  { id: 4,  colors: 4, moves: 6, stones: 0, stoneHp: 1, intro: false, cascadeCap: 4,
+    targets: [{ type: 'any', count: 18 }] },
+
+  /* L5 — Slightly bigger target, same feel.
+     Formula: K=4, any, T=22, S=0.60 → M_formula=3. Tuned: 7 (+4, duration). */
+  { id: 5,  colors: 4, moves: 7, stones: 0, stoneHp: 1, intro: false, cascadeCap: 4,
+    targets: [{ type: 'any', count: 22 }] },
+
+  /* L6 — Player should be chaining regularly by now.
+     Formula: K=4, any, T=26, S=0.60 → M_formula=3. Tuned: 7 (+4, duration).
+     Cap slightly looser (5) so the player starts feeling the bigger
+     chains that Arc 2+ will deliver natively at K=5. */
+  { id: 6,  colors: 4, moves: 7, stones: 0, stoneHp: 1, intro: false, cascadeCap: 5,
+    targets: [{ type: 'any', count: 26 }] },
+
+  /* L7 — Last K=4 level. Largest any-color target in the arc; designed
+     so a single good cascade contributes most of the tiles.
+     Formula: K=4, any, T=32, S=0.75 → M_formula=3. Tuned: 7 (+4, duration). */
+  { id: 7,  colors: 4, moves: 7, stones: 0, stoneHp: 1, intro: false,
+    targets: [{ type: 'any', count: 32 }] },
+
+  /* ============================================================
+     ARC 2 — EXPANSION (L8–L15)
+     Target win rate ~75%, session 60–90s.
+     Teaches: K=5 demands aim; color-specific targets (L11+).
+     ============================================================ */
+
+  /* L8 — First K=5 level. Preset softens the landing: row 3 reads
+     [G, G, O, B, R, G], slide right 1 → [G, G, G, O, B, R]. Shows that
+     at K=5, a clean 3-match still exists if you look for it.
+     Formula: K=5, any, T=22, S=0.45 → M_formula=max(3, ceil(22/29.73))=3.
+     Tuned: 7 (+4, transition cushion — player's K=4 intuition is about
+     to recalibrate to K=5 yields ~1/3 as rich). */
+  {
+    id: 8, colors: 5, moves: 7, stones: 0, stoneHp: 1, intro: false,
+    targets: [{ type: 'any', count: 22 }],
+    presetBoard: (() => {
+      const R=0, O=1, Y=2, G=3, B=4;
+      const rows = [
+        [R, O, Y, G, B, R],
+        [Y, G, B, R, O, Y],
+        [B, R, O, Y, G, B],
+        [G, G, O, B, R, G],  // ← intended: row 3 right 1
+        [R, B, R, O, Y, G],
+        [R, O, Y, G, B, R],
+        [Y, G, B, R, O, Y],
+      ];
+      return rows.map(row => row.map(c => ({ type: 'normal', color: c })));
+    })(),
+  },
+
+  /* L9 — K=5 any-color on a random board. First real "look before you slide" level.
+     Formula: K=5, any, T=26, S=0.60 → M_formula=max(3, ceil(26/27.54))=3. Tuned: 8 (+5, duration). */
+  { id: 9,  colors: 5, moves: 8, stones: 0, stoneHp: 1, intro: false,
+    targets: [{ type: 'any', count: 26 }] },
+
+  /* L10 — Last any-color level before color-specific targets enter.
+     Formula: K=5, any, T=30, S=0.60 → M_formula=max(3, ceil(30/27.54))=3. Tuned: 8. */
+  { id: 10, colors: 5, moves: 8, stones: 0, stoneHp: 1, intro: false,
+    targets: [{ type: 'any', count: 30 }] },
+
+  /* L11 — First color-specific target. Target=green so early matches still
+     feel productive (green has good K=5 random-distribution visibility).
+     Formula: K=5, color, T=7, S=0.75, E_color=E×0.78×0.40/5=4.88
+              → M_formula=ceil(7/4.88)=2, floored to 3.
+     Tuned: 7 (+4, duration + learning curve for "pop the right color"). */
+  { id: 11, colors: 5, moves: 7, stones: 0, stoneHp: 1, intro: false,
+    targets: [{ type: 'color', color: 3, count: 7 }] },
+
+  /* L12 — Different color target (red) keeps the mechanic fresh.
+     Formula: K=5, color, T=8, S=0.75 → M_formula=ceil(8/4.88)=2, floored 3. Tuned: 8. */
+  { id: 12, colors: 5, moves: 8, stones: 0, stoneHp: 1, intro: false,
+    targets: [{ type: 'color', color: 0, count: 8 }] },
+
+  /* L13 — Blue target. Larger count forces more intentional slides.
+     Formula: K=5, color, T=9, S=0.75 → M_formula=ceil(9/4.88)=2, floored 3. Tuned: 8. */
+  { id: 13, colors: 5, moves: 8, stones: 0, stoneHp: 1, intro: false,
+    targets: [{ type: 'color', color: 4, count: 9 }] },
+
+  /* L14 — Yellow, largest single-color count in the arc.
+     Formula: K=5, color, T=10, S=0.75 → M_formula=ceil(10/4.88)=3. Tuned: 9. */
+  { id: 14, colors: 5, moves: 9, stones: 0, stoneHp: 1, intro: false,
+    targets: [{ type: 'color', color: 2, count: 10 }] },
+
+  /* L15 — Arc 2 closer. Back to any-color but at a bigger total.
+     Re-affirms "any-color" feel before stones hit next level.
+     Formula: K=5, any, T=32, S=0.75, E=24.41 → M_formula=ceil(32/24.41)=2, floored 3. Tuned: 8. */
+  { id: 15, colors: 5, moves: 8, stones: 0, stoneHp: 1, intro: false,
+    targets: [{ type: 'any', count: 32 }] },
+
+  /* ============================================================
+     ARC 3 — OBSTACLES (L16–L23)
+     Target win rate ~60%, session 90–120s.
+     Teaches: stones eat board space and only break via adjacent pops.
+     Genuine difficulty spike at L21.
+     ============================================================ */
+
+  /* L16 — First stone level. Preset positions a single HP=1 stone at (2,2)
+     with row 3 reading [R, R, G, B, O, R]. Slide row 3 right 1 makes 3 Rs at
+     cols 0–1–2; the Rs at col 2 pop adjacent to the stone at (2,2),
+     breaking it. First-impression moment for stones.
+     Formula: K=5, any, T=20, O=1, S=0.45, E_eff=29.73×0.776=23.08
+              → M_formula=max(3, ceil(20/23.08))=3. Tuned: 9 (+6, transition cushion). */
+  {
+    id: 16, colors: 5, moves: 9, stones: 1, stoneHp: 1, intro: false,
+    targets: [{ type: 'any', count: 20 }],
+    presetBoard: (() => {
+      const R=0, O=1, Y=2, G=3, B=4;
+      const S = { type: 'stone', hp: 1 };  // stone marker
+      const t = (c) => ({ type: 'normal', color: c });
+      return [
+        [t(R), t(O), t(Y), t(G), t(B), t(R)],
+        [t(Y), t(G), t(B), t(R), t(O), t(Y)],
+        [t(B), t(G), S,    t(Y), t(G), t(B)],  // ← stone at (2,2)
+        [t(R), t(R), t(G), t(B), t(O), t(R)],  // ← intended: row 3 right 1
+        [t(G), t(B), t(R), t(O), t(Y), t(G)],
+        [t(R), t(O), t(Y), t(G), t(B), t(R)],
+        [t(Y), t(G), t(B), t(R), t(O), t(Y)],
+      ];
+    })(),
+  },
+
+  /* L17 — Random K=5 board with one stone. Player learns stones don't
+     disappear on their own — you have to pop *next to* them.
+     Formula: K=5, any, T=26, O=1, S=0.60, E_eff=21.37 → M_formula=ceil(26/21.37)=2, floored 3. Tuned: 9. */
+  { id: 17, colors: 5, moves: 9,  stones: 1, stoneHp: 1, intro: false,
+    targets: [{ type: 'any', count: 26 }] },
+
+  /* L18 — Color target + stone. Player must hit the right color AND work around a stone.
+     Formula: K=5, color, T=8, O=1, S=0.75, E_color=3.79 → M_formula=ceil(8/3.79)=3. Tuned: 9. */
+  { id: 18, colors: 5, moves: 9,  stones: 1, stoneHp: 1, intro: false,
+    targets: [{ type: 'color', color: 3, count: 8 }] },
+
+  /* L19 — Two stones, color target. Board space pressure emerges.
+     Formula: K=5, color, T=9, O=2, S=0.75, E_color=2.69 → M_formula=ceil(9/2.69)=4. Tuned: 10. */
+  { id: 19, colors: 5, moves: 10, stones: 2, stoneHp: 1, intro: false,
+    targets: [{ type: 'color', color: 0, count: 9 }] },
+
+  /* L20 — First K=6 level. Any-color so the player can feel the new
+     color count in isolation (no color-target pressure on top of the K bump).
+     Formula: K=6, any, T=22, O=1, S=0.60, E=33.27×0.88×0.40×0.776=9.09
+              → M_formula=ceil(22/9.09)=3. Tuned: 10 (+7 over M_formula;
+     ~-9% vs duration-implied 11, within ±20%). */
+  { id: 20, colors: 6, moves: 10, stones: 1, stoneHp: 1, intro: false,
+    targets: [{ type: 'any', count: 22 }] },
+
+  /* L21 — SPIKE. K=6 + color target + 2 stones. Color-yield at K=6
+     with 2 stones is brutal: E_color = 33.27×0.78×0.40×0.552/6 = 0.955.
+     Formula: T=7 → M_formula=ceil(7/0.955)=8. Tuned: 8 (exactly formula).
+     This is the gearshift: the level says "you're not coasting anymore."
+     Anti-frustration +2 on 2 fails gives 10 moves silently on attempt 3. */
+  { id: 21, colors: 6, moves: 8,  stones: 2, stoneHp: 1, intro: false,
+    targets: [{ type: 'color', color: 4, count: 7 }] },
+
+  /* L22 — Recovery after the spike. Same structure as L21 but one
+     difficulty tier easier on S, one more move, smaller count.
+     Formula: K=6, color, T=8, O=2, S=0.60, E_color=1.08 → M_formula=ceil(8/1.08)=8. Tuned: 9 (+1, recovery). */
+  { id: 22, colors: 6, moves: 9,  stones: 2, stoneHp: 1, intro: false,
+    targets: [{ type: 'color', color: 5, count: 8 }] },
+
+  /* L23 — Arc closer. Three stones but back to any-color, so stones
+     primarily act as board-geometry rather than yield-killers.
+     Formula: K=6, any, T=22, O=3, S=0.60, E=3.84 → M_formula=ceil(22/3.84)=6. Tuned: 10 (+4, arc closer, duration). */
+  { id: 23, colors: 6, moves: 10, stones: 3, stoneHp: 1, intro: false,
+    targets: [{ type: 'any', count: 22 }] },
+
+  /* ============================================================
+     ARC 4 — MASTERY (L24–L30)
+     Target win rate ~55%, session 120–180s.
+     Teaches: HP=2 stones need two hits; multi-target splits attention.
+     Finale spike at L30 only. L28/L29 hard-but-fair at formula-value.
+     ============================================================ */
+
+  /* L24 — First HP=2 stone level. Preset shows two HP=2 stones visibly
+     placed at (1,2) and (5,3). Row 4 reads [G, G, B, P, R, G] — slide
+     row 4 right 1 → [G, G, G, B, P, R], a 3-match of greens (the target
+     color). Not a stone-break level — just a "look, HP=2 stones exist, and
+     here's a fresh slide anyway" introduction.
+     Formula: K=6, color, T=7, O=2, S=0.60, E_color=1.08 → M_formula=ceil(7/1.08)=7. Tuned: 10 (+3, transition cushion). */
+  {
+    id: 24, colors: 6, moves: 10, stones: 2, stoneHp: 2, intro: false,
+    targets: [{ type: 'color', color: 3, count: 7 }],
+    presetBoard: (() => {
+      const R=0, O=1, Y=2, G=3, B=4, P=5;
+      const S2 = { type: 'stone', hp: 2 };
+      const t = (c) => ({ type: 'normal', color: c });
+      return [
+        [t(R), t(O), t(Y), t(G), t(B), t(P)],
+        [t(Y), t(G), S2,   t(P), t(R), t(O)],  // ← HP=2 stone at (1,2)
+        [t(B), t(P), t(R), t(O), t(Y), t(G)],
+        [t(R), t(O), t(Y), t(G), t(B), t(P)],
+        [t(G), t(G), t(B), t(P), t(R), t(G)],  // ← intended: row 4 right 1
+        [t(B), t(P), t(R), S2,   t(Y), t(G)],  // ← HP=2 stone at (5,3)
+        [t(R), t(O), t(Y), t(G), t(B), t(P)],
+      ];
+    })(),
+  },
+
+  /* L25 — Two HP=2 stones random, color target.
+     Formula: K=6, color, T=8, O=2, S=0.75, E_color=0.955 → M_formula=ceil(8/0.955)=9. Tuned: 10 (+1, first-random cushion). */
+  { id: 25, colors: 6, moves: 10, stones: 2, stoneHp: 2, intro: false,
+    targets: [{ type: 'color', color: 0, count: 8 }] },
+
+  /* L26 — Three HP=2 stones, any-color.
+     Formula: K=6, any, T=22, O=3, S=0.75, E=3.40 → M_formula=ceil(22/3.40)=7. Tuned: 11 (+4, stone clutter). */
+  { id: 26, colors: 6, moves: 11, stones: 3, stoneHp: 2, intro: false,
+    targets: [{ type: 'any', count: 22 }] },
+
+  /* L27 — First multi-target level. Two colors, 6 each.
+     Formula per target: K=6, color, T=6, O=2, S=0.75, E_color=0.955 → M=ceil(6/0.955)=7.
+     Dual-target can't just use hardest-M; player spends slides on both.
+     Tuned: 11 (+57% over single-target 7; within the ±20% note only if
+     you compare to an effective-dual-M estimate of ~10. Comment justifies). */
+  { id: 27, colors: 6, moves: 11, stones: 2, stoneHp: 2, intro: false,
+    targets: [
+      { type: 'color', color: 1, count: 6 },
+      { type: 'color', color: 4, count: 6 },
+    ] },
+
+  /* L28 — Hard-but-fair, NOT a spike. Single color target, tough content.
+     Formula: K=6, color, T=7, O=3, S=0.75, E_color=0.568 → M_formula=ceil(7/0.568)=13. Tuned: 13 (formula-exact). */
+  { id: 28, colors: 6, moves: 13, stones: 3, stoneHp: 2, intro: false,
+    targets: [{ type: 'color', color: 2, count: 7 }] },
+
+  /* L29 — Dual-color, three stones. Hard-but-fair.
+     Per-color M_formula=ceil(5/0.568)=9. Dual-target practical ~13. Tuned: 13. */
+  { id: 29, colors: 6, moves: 13, stones: 3, stoneHp: 2, intro: false,
+    targets: [
+      { type: 'color', color: 3, count: 5 },
+      { type: 'color', color: 5, count: 5 },
+    ] },
+
+  /* L30 — FINALE SPIKE. Dual 6-count color, 3 HP=2 stones, hardest S-tier.
+     Formula per target: K=6, color, T=6, O=3, S=0.90, E_color=(33.27×0.65×0.40×0.328)/6=0.473
+              → M_formula=ceil(6/0.473)=13. Dual-target practical ~17. Tuned: 11 (−35%).
+     Intentionally tight finale. 2-star is expected first-try outcome,
+     3-star is the brag. Anti-frustration +2 after 2 fails soft-lands
+     most players at effective 13 moves. */
+  { id: 30, colors: 6, moves: 11, stones: 3, stoneHp: 2, intro: false,
+    targets: [
+      { type: 'color', color: 0, count: 6 },
+      { type: 'color', color: 4, count: 6 },
+    ] },
+];
+
+function getLevel(n) {
+  return LEVELS[n - 1] || LEVELS[LEVELS.length - 1];
+}
+
+/* ==========================================================
+   GAME STATE
+   ========================================================== */
+let state = null;
+let busy  = false;            // locks input during animations
+let tileEl = new Map();       // id -> element
+let tileIdCounter = 0;
+
+/* Drag state during a slide gesture */
+let drag = null;
+/*
+  drag = {
+    pointerId, startX, startY,
+    startR, startC,             // cell user first touched
+    axis: null | 'row' | 'col',
+    r, c,                        // line row/col once locked
+    lineCells,                   // array of cells in that line (length COLS or ROWS)
+    lineLength,                  // total px length of the line (COLS*cellW or ROWS*cellH)
+    cellSize,                    // width for row drags, height for col drags
+    delta,                       // current drag delta in px
+    ghosts,                      // array of ghost DOM elements
+  }
+*/
+
+function newState(levelNum) {
+  const lvl = getLevel(levelNum);
+  // Anti-frustration: after the player has failed this level twice in a row,
+  // silently grant +2 moves. Never announced, never persists past a win.
+  const fails = progress.failCount[lvl.id] || 0;
+  const bonusMoves = fails >= 2 ? 2 : 0;
+  return {
+    level:      lvl,
+    grid:       generateBoard(lvl),
+    movesLeft:  lvl.moves + bonusMoves,
+    progress:   lvl.targets.map(t => ({ ...t, done: 0 })),
+    score:      0,
+    chain:      0,
+    bestChain:  0,
+    finished:   false,
+    won:        false,
+  };
+}
+
+/* ==========================================================
+   BOARD GENERATION
+   ========================================================== */
+function generateBoard(lvl) {
+  // Preset path: arc-transition / tutorial levels specify their board tile-by-tile.
+  // We deep-clone each cell so in-game mutations (pops, stones taking damage)
+  // don't persist back into the LEVELS table. Stones here override `lvl.stones`
+  // and `lvl.stoneHp` as a placement source-of-truth.
+  if (lvl.presetBoard) {
+    const g = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        const src = lvl.presetBoard[r][c];
+        if (!src) { g[r][c] = null; continue; }
+        if (src.type === 'stone') {
+          g[r][c] = { color: -1, type: 'stone', hp: src.hp ?? lvl.stoneHp };
+        } else {
+          g[r][c] = { color: src.color, type: 'normal' };
+        }
+      }
+    }
+    return g;
+  }
+
+  const g = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
+
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      let tries = 0;
+      while (true) {
+        const col = Math.floor(Math.random() * lvl.colors);
+        g[r][c] = { color: col, type: 'normal' };
+        if (!hasMatchAt(g, r, c)) break;
+        tries++;
+        if (tries > 20) break;
+      }
+    }
+  }
+
+  // stones (not on edges — otherwise they always stay at the edge)
+  if (lvl.stones > 0) {
+    let placed = 0, attempts = 0;
+    while (placed < lvl.stones && attempts < 80) {
+      const r = 1 + Math.floor(Math.random() * (ROWS - 2));
+      const c = 1 + Math.floor(Math.random() * (COLS - 2));
+      if (g[r][c].type === 'normal') {
+        g[r][c] = { color: -1, type: 'stone', hp: lvl.stoneHp };
+        placed++;
+      }
+      attempts++;
+    }
+  }
+  return g;
+}
+
+function hasMatchAt(g, r, c) {
+  const cell = g[r][c];
+  if (!cell || cell.type !== 'normal') return false;
+  const col = cell.color;
+  const visited = new Set();
+  const stack = [[r, c]];
+  let count = 0;
+  while (stack.length) {
+    const [y, x] = stack.pop();
+    const k = y + ',' + x;
+    if (visited.has(k)) continue;
+    if (y < 0 || y >= ROWS || x < 0 || x >= COLS) continue;
+    const cur = g[y][x];
+    if (!cur || cur.type !== 'normal' || cur.color !== col) continue;
+    visited.add(k);
+    count++;
+    if (count >= MATCH_MIN) return true;
+    stack.push([y+1,x],[y-1,x],[y,x+1],[y,x-1]);
+  }
+  return false;
+}
+
+/* ==========================================================
+   RENDERING
+   ========================================================== */
+function cellSize() {
+  const rect = board.getBoundingClientRect();
+  return {
+    w: rect.width / COLS,
+    h: rect.height / ROWS,
+    width:  rect.width,
+    height: rect.height,
+  };
+}
+function pxFor(r, c) {
+  const sz = cellSize();
+  const pad = sz.w * 0.07;
+  return {
+    left: c * sz.w + pad,
+    top:  r * sz.h + pad,
+    w:    sz.w - pad * 2,
+    h:    sz.h - pad * 2,
+  };
+}
+
+function renderBoard() {
+  board.innerHTML = '';
+  tileEl.clear();
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      const cell = state.grid[r][c];
+      if (!cell) continue;
+      if (!cell.id) cell.id = ++tileIdCounter;
+      spawnTileEl(cell, r, c, false);
+    }
+  }
+}
+
+function classForCell(cell) {
+  if (cell.type === 'stone') return 'stone';
+  return 'c' + cell.color;
+}
+
+function spawnTileEl(cell, r, c, animate = true) {
+  const p = pxFor(r, c);
+  const el = document.createElement('div');
+  el.className = 'tile ' + classForCell(cell);
+  if (cell.type === 'stone') el.dataset.hp = cell.hp;
+  el.style.left   = p.left + 'px';
+  el.style.top    = p.top  + 'px';
+  el.style.width  = p.w    + 'px';
+  el.style.height = p.h    + 'px';
+  el.dataset.id = cell.id;
+  el.dataset.row = r;
+  el.dataset.col = c;
+  if (animate) el.classList.add('spawning');
+
+  el.addEventListener('pointerdown', onPointerDown, { passive: false });
+  board.appendChild(el);
+  tileEl.set(cell.id, el);
+  return el;
+}
+
+function moveTileTo(cell, r, c) {
+  const el = tileEl.get(cell.id);
+  if (!el) return;
+  const p = pxFor(r, c);
+  el.style.left = p.left + 'px';
+  el.style.top  = p.top  + 'px';
+  el.dataset.row = r;
+  el.dataset.col = c;
+}
+
+function removeTileEl(id) {
+  const el = tileEl.get(id);
+  if (!el) return;
+  el.remove();
+  tileEl.delete(id);
+}
+
+/* ==========================================================
+   UI updates: score, moves, targets
+   ========================================================== */
+function renderScore() { scoreEl.textContent = state.score; }
+function renderMoves() {
+  movesEl.textContent = state.movesLeft;
+  movesPill.classList.toggle('low', state.movesLeft <= 3);
+}
+function renderTargets() {
+  targetsEl.innerHTML = '';
+  for (const t of state.progress) {
+    const div = document.createElement('div');
+    div.className = 'target' + (t.done >= t.count ? ' done' : '');
+    const remaining = Math.max(0, t.count - t.done);
+
+    if (t.type === 'scripted') {
+      // L1 tutorial: no count shown, just a "find a match" prompt.
+      // Rainbow orb with an exclamation mark; checkmark on completion.
+      div.innerHTML = `
+        <div class="t-orb t-orb-scripted" style="background: conic-gradient(var(--c0), var(--c1), var(--c2), var(--c3), var(--c4), var(--c5), var(--c0));">!</div>
+        <span class="t-count t-count-scripted">match</span>
+        <svg class="t-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 12 10 18 20 6"/></svg>
+      `;
+    } else if (t.type === 'any') {
+      div.innerHTML = `
+        <div class="t-orb" style="background: conic-gradient(var(--c0), var(--c1), var(--c2), var(--c3), var(--c4), var(--c5), var(--c0));"></div>
+        <span class="t-count">${remaining}</span>
+        <svg class="t-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 12 10 18 20 6"/></svg>
+      `;
+    } else {
+      div.innerHTML = `
+        <div class="t-orb" style="background: var(--c${t.color});"></div>
+        <span class="t-count">${remaining}</span>
+        <svg class="t-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 12 10 18 20 6"/></svg>
+      `;
+    }
+    targetsEl.appendChild(div);
+  }
+}
+
+/* ==========================================================
+   INPUT — drag to slide a line (row or column)
+
+   Flow:
+   1. pointerdown on tile -> record start, mark as potential drag
+   2. pointermove accumulates dx/dy. After DEAD_ZONE, lock axis.
+      Create "ghost" copies of each tile in the line, positioned
+      at +lineLength and -lineLength offsets (so wrap looks smooth).
+   3. pointermove while locked -> translate all line members + ghosts
+   4. pointerup:
+       - compute shift cells (round(delta / cellSize))
+       - animate snap to that offset
+       - if shift !== 0: commit (rotate logical array), spend a move,
+         run match resolution
+       - else: snap back, no cost
+   ========================================================== */
+
+function onPointerDown(e) {
+  if (busy || !state || state.finished) return;
+
+  // If tutorial is showing, block input
+  if (tutorial.classList.contains('on')) return;
+
+  // L1 arrow dismisses as soon as the player commits to a drag — we don't
+  // want it crowding the playfield once they've started engaging.
+  const arrow = $('l1-arrow');
+  if (arrow && arrow.classList.contains('on')) arrow.classList.remove('on');
+
+  const el = e.currentTarget;
+  const r = +el.dataset.row;
+  const c = +el.dataset.col;
+  const cell = state.grid[r][c];
+  if (!cell) return;
+
+  // Stones cannot initiate a drag (but move when their line is dragged)
+  if (cell.type === 'stone') return;
+
+  // Capture pointer so we keep getting move/up events outside the tile
+  try { el.setPointerCapture(e.pointerId); } catch {}
+
+  drag = {
+    pointerId: e.pointerId,
+    startX: e.clientX,
+    startY: e.clientY,
+    startR: r,
+    startC: c,
+    axis:   null,
+    delta:  0,
+    ghosts: [],
+  };
+
+  el.classList.add('dragging');
+
+  e.preventDefault();
+}
+
+document.addEventListener('pointermove', onPointerMove, { passive: false });
+document.addEventListener('pointerup',   onPointerUp,   { passive: false });
+document.addEventListener('pointercancel', onPointerUp, { passive: false });
+
+function onPointerMove(e) {
+  if (!drag || e.pointerId !== drag.pointerId) return;
+  const dx = e.clientX - drag.startX;
+  const dy = e.clientY - drag.startY;
+
+  if (drag.axis === null) {
+    // Lock axis once past deadzone
+    if (Math.abs(dx) < DRAG_DEADZONE && Math.abs(dy) < DRAG_DEADZONE) return;
+    drag.axis = Math.abs(dx) > Math.abs(dy) ? 'row' : 'col';
+    setupLineDrag();
+  }
+
+  // Apply delta
+  if (drag.axis === 'row') drag.delta = dx;
+  else                     drag.delta = dy;
+
+  applyLineDelta(drag.delta);
+  e.preventDefault();
+}
+
+function setupLineDrag() {
+  const sz = cellSize();
+  if (drag.axis === 'row') {
+    drag.r = drag.startR;
+    drag.c = null;
+    drag.lineCells = state.grid[drag.r].slice();
+    drag.lineLength = sz.width;
+    drag.cellSize = sz.w;
+  } else {
+    drag.c = drag.startC;
+    drag.r = null;
+    drag.lineCells = [];
+    for (let r = 0; r < ROWS; r++) drag.lineCells.push(state.grid[r][drag.c]);
+    drag.lineLength = sz.height;
+    drag.cellSize = sz.h;
+  }
+
+  // Mark line members (so left/top transition is disabled for instant tracking)
+  for (const cell of drag.lineCells) {
+    if (!cell) continue;
+    const el = tileEl.get(cell.id);
+    if (el) el.classList.add('is-line-member');
+  }
+
+  // Create ghost tiles at ±lineLength offsets
+  for (const cell of drag.lineCells) {
+    if (!cell) continue;
+    const el = tileEl.get(cell.id);
+    if (!el) continue;
+    // ghost at -lineLength
+    const gBefore = el.cloneNode(true);
+    gBefore.classList.add('ghost');
+    gBefore.classList.remove('dragging', 'is-line-member');
+    gBefore.style.pointerEvents = 'none';
+    offsetGhost(gBefore, el, drag.axis, -drag.lineLength);
+    board.appendChild(gBefore);
+    // ghost at +lineLength
+    const gAfter = el.cloneNode(true);
+    gAfter.classList.add('ghost');
+    gAfter.classList.remove('dragging', 'is-line-member');
+    gAfter.style.pointerEvents = 'none';
+    offsetGhost(gAfter, el, drag.axis, drag.lineLength);
+    board.appendChild(gAfter);
+    drag.ghosts.push({ source: cell, gBefore, gAfter });
+  }
+}
+
+function offsetGhost(ghost, srcEl, axis, delta) {
+  const left = parseFloat(srcEl.style.left);
+  const top  = parseFloat(srcEl.style.top);
+  if (axis === 'row') {
+    ghost.style.left = (left + delta) + 'px';
+    ghost.style.top  = top + 'px';
+  } else {
+    ghost.style.left = left + 'px';
+    ghost.style.top  = (top + delta) + 'px';
+  }
+}
+
+function applyLineDelta(delta) {
+  // Translate all line members + their ghosts by delta along the axis
+  for (const cell of drag.lineCells) {
+    if (!cell) continue;
+    const el = tileEl.get(cell.id);
+    if (!el) continue;
+    if (drag.axis === 'row') el.style.transform = `translateX(${delta}px)`;
+    else                     el.style.transform = `translateY(${delta}px)`;
+  }
+  for (const g of drag.ghosts) {
+    const prop = drag.axis === 'row' ? 'translateX' : 'translateY';
+    g.gBefore.style.transform = `${prop}(${delta}px)`;
+    g.gAfter .style.transform = `${prop}(${delta}px)`;
+  }
+}
+
+function onPointerUp(e) {
+  if (!drag || e.pointerId !== drag.pointerId) return;
+
+  if (drag.axis === null) {
+    // Never locked axis -> treat as a tap/click: just cleanup
+    cleanupDrag();
+    return;
+  }
+
+  // Compute shift in cells
+  const shift = Math.round(drag.delta / drag.cellSize);
+
+  if (shift === 0) {
+    // Snap back to 0 with transition
+    animateSnapLine(0).then(() => cleanupDrag(true));
+    return;
+  }
+
+  // Animate snap to shift*cellSize, then commit logical rotation
+  const target = shift * drag.cellSize;
+  animateSnapLine(target).then(() => commitSlide(shift));
+}
+
+function animateSnapLine(target) {
+  return new Promise(resolve => {
+    // Temporarily add a short transition for the snap
+    const members = [];
+    for (const cell of drag.lineCells) {
+      if (!cell) continue;
+      const el = tileEl.get(cell.id);
+      if (!el) continue;
+      members.push(el);
+    }
+    const ghostEls = [];
+    for (const g of drag.ghosts) { ghostEls.push(g.gBefore, g.gAfter); }
+
+    const all = members.concat(ghostEls);
+    for (const el of all) {
+      el.style.transition = 'transform 180ms cubic-bezier(0.22, 1, 0.36, 1)';
+      if (drag.axis === 'row') el.style.transform = `translateX(${target}px)`;
+      else                     el.style.transform = `translateY(${target}px)`;
+    }
+    setTimeout(() => {
+      for (const el of all) {
+        el.style.transition = '';
+      }
+      resolve();
+    }, 190);
+  });
+}
+
+function cleanupDrag(clearTransforms = true) {
+  if (!drag) return;
+  if (clearTransforms) {
+    for (const cell of drag.lineCells || []) {
+      if (!cell) continue;
+      const el = tileEl.get(cell.id);
+      if (!el) continue;
+      el.style.transform = '';
+      el.classList.remove('dragging', 'is-line-member');
+    }
+  }
+  // Remove ghosts
+  for (const g of drag.ghosts || []) {
+    g.gBefore.remove();
+    g.gAfter.remove();
+  }
+  drag = null;
+}
+
+/* Commit: rotate the array in state, move tile elements to their new
+   logical home positions (via left/top), clean up transforms + ghosts,
+   then resolve matches.
+
+   Critical: we must update left/top AND clear transform in a single
+   transition-disabled batch, otherwise the tile visibly jumps back
+   to its pre-drag position for one frame before moving to its final
+   slot. Do it all, then force a single reflow, then restore transitions. */
+async function commitSlide(shift) {
+  busy = true;
+
+  // 1) Rotate the line in state.grid
+  const line = drag.lineCells.slice();
+  const n = line.length;
+  const s = ((shift % n) + n) % n;
+  const rotated = line.slice(n - s).concat(line.slice(0, n - s));
+
+  if (drag.axis === 'row') {
+    for (let c = 0; c < COLS; c++) state.grid[drag.r][c] = rotated[c];
+  } else {
+    for (let r = 0; r < ROWS; r++) state.grid[r][drag.c] = rotated[r];
+  }
+
+  // 2) Remove ghosts (they're no longer needed)
+  for (const g of drag.ghosts || []) { g.gBefore.remove(); g.gAfter.remove(); }
+
+  // 3) Single batch: update left/top to new slots, clear transform,
+  //    with transition disabled so no animation is seen (tiles are
+  //    already visually at the correct position thanks to the snap).
+  const members = [];
+  for (let i = 0; i < n; i++) {
+    const cell = rotated[i];
+    if (!cell) continue;
+    const r = drag.axis === 'row' ? drag.r : i;
+    const c = drag.axis === 'row' ? i : drag.c;
+    const el = tileEl.get(cell.id);
+    if (!el) continue;
+    const p = pxFor(r, c);
+    el.style.transition = 'none';
+    el.style.left      = p.left + 'px';
+    el.style.top       = p.top  + 'px';
+    el.style.transform = '';
+    el.classList.remove('dragging', 'is-line-member');
+    el.dataset.row = r;
+    el.dataset.col = c;
+    members.push(el);
+  }
+  // Force one reflow for the whole batch, THEN restore transitions.
+  void board.offsetWidth;
+  for (const el of members) el.style.transition = '';
+
+  drag = null;
+
+  // 4) Spend a move
+  state.movesLeft--;
+  renderMoves();
+
+  // 5) Resolve matches (with cascades)
+  await resolveMatches();
+
+  // 6) Win/Fail check
+  if (targetsComplete()) winLevel();
+  else if (state.movesLeft <= 0) failLevel();
+
+  busy = false;
+}
+
+function targetsComplete() {
+  return state.progress.every(t => t.done >= t.count);
+}
+
+/* ==========================================================
+   MATCH RESOLUTION (with cascades)
+   ========================================================== */
+async function resolveMatches() {
+  let cascade = 0;
+  // Optional per-level cap. L2–L6 set this (see LEVELS definitions) to
+  // prevent Chain ×18+ on boards with "unlucky" gravity alignments. L7+
+  // and endless are uncapped so expert players still see satisfying
+  // mega-chains in later content.
+  const cap = state.level.cascadeCap || 0;
+
+  while (true) {
+    const clusters = findAllMatches();
+    if (clusters.length === 0) break;
+
+    cascade++;
+    if (cascade > state.bestChain) state.bestChain = cascade;
+
+    // Chain banner
+    if (cascade >= 2) {
+      chainBanner.textContent = `Chain ×${cascade}`;
+      chainBanner.classList.add('on');
+      setTimeout(() => chainBanner.classList.remove('on'), 900);
+      showCombo(cascade);
+    }
+
+    const cells = clusters.flat();
+
+    // Update target progress
+    for (const { r, c } of cells) {
+      const cell = state.grid[r][c];
+      if (!cell) continue;
+      for (const t of state.progress) {
+        if (t.done >= t.count) continue;
+        if (t.type === 'any') t.done++;
+        else if (t.type === 'color' && cell.color === t.color) t.done++;
+        else if (t.type === 'scripted') t.done = t.count;  // any match wins L1
+      }
+    }
+    renderTargets();
+
+    // Score: tiles × 10 × cascade multiplier
+    const gain = cells.length * 10 * cascade;
+    state.score += gain;
+    renderScore();
+    spawnPopScore(cells, gain);
+
+    // Pop tiles with particles
+    for (const { r, c } of cells) {
+      const cell = state.grid[r][c];
+      if (!cell) continue;
+      const el = tileEl.get(cell.id);
+      if (el) {
+        el.classList.add('popping');
+        emitParticles(el, cell.color);
+        setTimeout(((id) => () => removeTileEl(id))(cell.id), 310);
+      }
+      state.grid[r][c] = null;
+    }
+
+    // Damage adjacent stones
+    damageAdjacentStones(cells);
+
+    await wait(300);
+    applyGravity();
+    await wait(320);
+    refillBoard();
+    await wait(380);
+
+    // Respect the per-level cascade cap. Any matches that would have
+    // fired next iteration stay on the board and will pop as cascade-1
+    // of the player's next slide — feels like "momentum" rather than a
+    // hard cutoff, and prevents runaway chain explosions.
+    if (cap && cascade >= cap) break;
+  }
+}
+
+function findAllMatches() {
+  const visited = Array.from({ length: ROWS }, () => Array(COLS).fill(false));
+  const clusters = [];
+
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      if (visited[r][c]) continue;
+      const cell = state.grid[r][c];
+      if (!cell || cell.type !== 'normal') { visited[r][c] = true; continue; }
+
+      const color = cell.color;
+      const cluster = [];
+      const stack = [[r, c]];
+      while (stack.length) {
+        const [y, x] = stack.pop();
+        if (y < 0 || y >= ROWS || x < 0 || x >= COLS) continue;
+        if (visited[y][x]) continue;
+        const cur = state.grid[y][x];
+        if (!cur || cur.type !== 'normal' || cur.color !== color) continue;
+        visited[y][x] = true;
+        cluster.push({ r: y, c: x });
+        stack.push([y+1,x],[y-1,x],[y,x+1],[y,x-1]);
+      }
+      if (cluster.length >= MATCH_MIN) clusters.push(cluster);
+    }
+  }
+  return clusters;
+}
+
+function damageAdjacentStones(cells) {
+  const hit = new Set();
+  for (const { r, c } of cells) {
+    const nbs = [[r+1,c],[r-1,c],[r,c+1],[r,c-1]];
+    for (const [nr, nc] of nbs) {
+      if (nr<0||nr>=ROWS||nc<0||nc>=COLS) continue;
+      const cell = state.grid[nr][nc];
+      if (!cell || cell.type !== 'stone') continue;
+      const key = nr + ',' + nc;
+      if (hit.has(key)) continue;
+      hit.add(key);
+      cell.hp--;
+      const el = tileEl.get(cell.id);
+      if (!el) continue;
+      if (cell.hp <= 0) {
+        // stone broken counts toward 'any' target
+        for (const t of state.progress) if (t.type === 'any' && t.done < t.count) t.done++;
+        el.classList.add('popping');
+        setTimeout(((id) => () => removeTileEl(id))(cell.id), 310);
+        state.grid[nr][nc] = null;
+      } else {
+        el.dataset.hp = cell.hp;
+        el.classList.remove('hit');
+        void el.offsetWidth;
+        el.classList.add('hit');
+      }
+    }
+  }
+  renderTargets();
+}
+
+/* ==========================================================
+   GRAVITY + REFILL
+   ========================================================== */
+function applyGravity() {
+  for (let c = 0; c < COLS; c++) {
+    let writeRow = ROWS - 1;
+    for (let r = ROWS - 1; r >= 0; r--) {
+      const cell = state.grid[r][c];
+      if (cell) {
+        if (writeRow !== r) {
+          state.grid[writeRow][c] = cell;
+          state.grid[r][c] = null;
+          moveTileTo(cell, writeRow, c);
+        }
+        writeRow--;
+      }
+    }
+  }
+}
+
+function refillBoard() {
+  for (let c = 0; c < COLS; c++) {
+    for (let r = 0; r < ROWS; r++) {
+      if (state.grid[r][c]) continue;
+      const newCell = {
+        color: chooseRefillColor(r, c),
+        type:  'normal',
+      };
+      newCell.id = ++tileIdCounter;
+      state.grid[r][c] = newCell;
+      spawnTileEl(newCell, r, c, true);
+    }
+  }
+}
+
+function chooseRefillColor(r, c) {
+  const maxColors = state.level.colors;
+  const grid = state.grid;
+
+  // Would placing `color` at (r, c) complete any 3+ connected cluster?
+  // Runs a BFS from (r, c) pretending (r, c) has `color`; if the flood
+  // reaches MATCH_MIN (3), the color is rejected.
+  //
+  // This replaces the old "only check left/left2 same and up/up2 same"
+  // logic, which missed L-shapes, T-shapes, and 2×2 clusters — the main
+  // reason early levels produced Chain ×18 from a single random refill.
+  // Now every new tile is guaranteed not to form an instant match at fill
+  // time, so cascades only continue when the BOARD itself has naturally
+  // aligned after gravity — which is rare and always feels earned.
+  function wouldMatch(color) {
+    const visited = new Set();
+    const stack = [[r, c]];
+    let count = 0;
+    while (stack.length) {
+      const [y, x] = stack.pop();
+      const k = y + ',' + x;
+      if (visited.has(k)) continue;
+      if (y < 0 || y >= ROWS || x < 0 || x >= COLS) continue;
+      let cellColor;
+      if (y === r && x === c) {
+        cellColor = color;   // Candidate
+      } else {
+        const cell = grid[y][x];
+        // null (unfilled during refill) or a stone breaks the cluster here
+        if (!cell || cell.type !== 'normal') continue;
+        cellColor = cell.color;
+      }
+      if (cellColor !== color) continue;
+      visited.add(k);
+      count++;
+      if (count >= MATCH_MIN) return true;
+      stack.push([y+1,x],[y-1,x],[y,x+1],[y,x-1]);
+    }
+    return false;
+  }
+
+  const forbidden = new Set();
+  for (let col = 0; col < maxColors; col++) {
+    if (wouldMatch(col)) forbidden.add(col);
+  }
+
+  // Dead-end (every color would make a match — very rare on a sparse
+  // refill slot). Fall back to any color so we never block the board.
+  if (forbidden.size >= maxColors) {
+    return Math.floor(Math.random() * maxColors);
+  }
+
+  // Pick a random non-forbidden color
+  let col, tries = 0;
+  do {
+    col = Math.floor(Math.random() * maxColors);
+    tries++;
+  } while (forbidden.has(col) && tries < 20);
+  return col;
+}
+
+/* ==========================================================
+   FX: particles, combo text, +score
+   ========================================================== */
+function emitParticles(fromEl, colorIdx) {
+  const rect = fromEl.getBoundingClientRect();
+  const stageRect = stage.getBoundingClientRect();
+  const cx = rect.left - stageRect.left + rect.width / 2;
+  const cy = rect.top  - stageRect.top  + rect.height / 2;
+  const colorVar = colorIdx >= 0 ? `var(--c${colorIdx})` : '#cdd3df';
+  const N = 6;
+  for (let i = 0; i < N; i++) {
+    const p = document.createElement('div');
+    p.className = 'particle';
+    p.style.left = cx + 'px';
+    p.style.top  = cy + 'px';
+    p.style.background = colorVar;
+    const angle = (i / N) * Math.PI * 2 + Math.random() * 0.4;
+    const dist  = 42 + Math.random() * 40;
+    const ex = Math.cos(angle) * dist;
+    const ey = Math.sin(angle) * dist + 20;
+    p.style.setProperty('--p-end', `translate(${ex}px, ${ey}px)`);
+    p.style.setProperty('--p-rot', (Math.random() * 720 - 360) + 'deg');
+    stage.appendChild(p);
+    setTimeout(() => p.remove(), 700);
+  }
+}
+
+function spawnPopScore(cells, gain) {
+  if (!cells.length) return;
+  // Anchor at cluster centroid
+  let sr = 0, sc = 0;
+  for (const { r, c } of cells) { sr += r; sc += c; }
+  const ar = sr / cells.length, ac = sc / cells.length;
+  const p = pxFor(Math.round(ar), Math.round(ac));
+  const el = document.createElement('div');
+  el.className = 'pop-score';
+  el.textContent = `+${gain}`;
+  el.style.left = (p.left + p.w / 2) + 'px';
+  el.style.top  = (p.top) + 'px';
+  board.appendChild(el);
+  setTimeout(() => el.remove(), 820);
+}
+
+function showCombo(n) {
+  const words = ['', '', 'NICE!', 'SWEET!', 'WOW!', 'EPIC!', 'INSANE!', 'GODLIKE!'];
+  const word = words[Math.min(n, words.length - 1)];
+  const el = document.createElement('div');
+  el.className = 'combo-text';
+  el.textContent = `${word}  ×${n}`;
+  el.style.background = 'linear-gradient(90deg, #FF8C42, #FFD93D, #34D399, #60A5FA, #C084FC)';
+  el.style.webkitBackgroundClip = 'text';
+  el.style.backgroundClip = 'text';
+  el.style.color = 'transparent';
+  stage.appendChild(el);
+  setTimeout(() => el.remove(), 960);
+}
+
+/* ==========================================================
+   FLOW
+   ========================================================== */
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function startLevel(n) {
+  state = newState(n);
+  $('game-level-num').textContent = n;
+  showScreen('screen-game');
+  $('modal-win').classList.remove('on');
+  $('modal-fail').classList.remove('on');
+
+  // L1 arrow starts hidden — revealed when the tutorial card is dismissed.
+  const arrow = $('l1-arrow');
+  if (arrow) arrow.classList.remove('on');
+
+  // Render on next frame so layout is settled
+  requestAnimationFrame(() => {
+    renderBoard();
+    renderScore();
+    renderMoves();
+    renderTargets();
+    if (state.level.intro) tutorial.classList.add('on');
+    else                   tutorial.classList.remove('on');
+  });
+}
+
+function winLevel() {
+  state.finished = true; state.won = true;
+
+  // Star rating: based on how much of the move budget was saved.
+  const budget = state.level.moves;
+  const used = budget - state.movesLeft;
+  const savedRatio = state.movesLeft / budget;
+  let stars = 1;
+  if (savedRatio >= 0.33) stars = 2;
+  const perfect = used <= Math.max(2, Math.ceil(budget * 0.4));
+  if (perfect) stars = 3;
+
+  const id = state.level.id;
+  progress.stars[id] = Math.max(progress.stars[id] ?? 0, stars);
+  progress.bestScore[id] = Math.max(progress.bestScore[id] ?? 0, state.score);
+  progress.failCount[id] = 0;  // reset anti-frustration counter on any win
+  if (progress.currentLevel <= id) progress.currentLevel = id + 1;
+  saveProgress();
+
+  // Update modal
+  const starEls = $('win-stars').querySelectorAll('.star-slot');
+  starEls.forEach((s, i) => s.classList.toggle('on', i < stars));
+  $('win-score').textContent = state.score;
+  $('win-chain').textContent = '×' + state.bestChain;
+  $('win-perfect-wrap').innerHTML = stars === 3 ? '<div class="perfect-badge">Perfect Slide</div>' : '';
+  $('win-title').textContent = stars === 3 ? 'Perfect!' : 'Level Clear!';
+  $('win-subtitle').textContent =
+    stars === 3 ? `Flawless on Level ${id}.` :
+    stars === 2 ? `Nice chain on Level ${id}.` :
+                  `Level ${id} done — aim higher next time!`;
+
+  setTimeout(() => {
+    $('modal-win').classList.add('on');
+    launchConfetti(stars === 3 ? 46 : 24);
+  }, 380);
+}
+
+function failLevel() {
+  state.finished = true; state.won = false;
+  const id = state.level.id;
+  progress.failCount[id] = (progress.failCount[id] || 0) + 1;
+  saveProgress();
+  setTimeout(() => $('modal-fail').classList.add('on'), 220);
+}
+
+/* ==========================================================
+   Confetti
+   ========================================================== */
+function launchConfetti(count) {
+  const palette = ['#FF4757','#FF8C42','#FFD93D','#34D399','#60A5FA','#C084FC'];
+  for (let i = 0; i < count; i++) {
+    const c = document.createElement('div');
+    c.className = 'confetti';
+    c.style.left = (Math.random() * 100) + '%';
+    c.style.background = palette[Math.floor(Math.random() * palette.length)];
+    c.style.animationDelay = (Math.random() * 0.4) + 's';
+    c.style.transform = `rotate(${Math.random() * 360}deg)`;
+    c.style.width = (6 + Math.random() * 6) + 'px';
+    c.style.height = (10 + Math.random() * 10) + 'px';
+    document.body.appendChild(c);
+    setTimeout(() => c.remove(), 2400);
+  }
+}
+
+/* ==========================================================
+   Decorative home-screen preview
+   ========================================================== */
+function buildHomePreview() {
+  const grid = $('preview-grid');
+  grid.innerHTML = '';
+  // Hand-picked 4x4 pattern that uses all six game colors, has no pre-existing
+  // 3-match anywhere (so it looks like a "legal" game state), and leaves the
+  // eye a near-match on the top row. Row indices drive the stagger so the
+  // demo slide looks like 4 rows of the real playfield slipping in sequence.
+  const pattern = [
+    [0, 3, 4, 2],  // R  G  B  Y
+    [2, 0, 5, 3],  // Y  R  P  G
+    [4, 2, 1, 5],  // B  Y  O  P
+    [1, 4, 3, 0],  // O  B  G  R
+  ];
+  for (let r = 0; r < 4; r++) {
+    for (let c = 0; c < 4; c++) {
+      const d = document.createElement('div');
+      d.className = 'p-tile c' + pattern[r][c];
+      d.style.animationDelay = (r * 0.18) + 's';
+      grid.appendChild(d);
+    }
+  }
+}
+
+/* ==========================================================
+   UTIL
+   ========================================================== */
+function wait(ms) { return new Promise(res => setTimeout(res, ms)); }
+
+function refreshHome() {
+  $('home-level-num').textContent = progress.currentLevel;
+}
+
+/* ==========================================================
+   WIRING
+   ========================================================== */
+$('btn-play').addEventListener('click', () => startLevel(progress.currentLevel));
+$('btn-home').addEventListener('click', () => { refreshHome(); showScreen('screen-home'); });
+$('btn-win-home').addEventListener('click', () => { $('modal-win').classList.remove('on'); refreshHome(); showScreen('screen-home'); });
+$('btn-fail-home').addEventListener('click', () => { $('modal-fail').classList.remove('on'); refreshHome(); showScreen('screen-home'); });
+$('btn-win-next').addEventListener('click', () => { $('modal-win').classList.remove('on'); startLevel(progress.currentLevel); });
+$('btn-fail-retry').addEventListener('click', () => { $('modal-fail').classList.remove('on'); startLevel(state.level.id); });
+$('btn-tutorial-ok').addEventListener('click', () => {
+  tutorial.classList.remove('on');
+  // Only L1 uses the arrow — reveal after the card clears
+  if (state && state.level && state.level.id === 1) {
+    $('l1-arrow').classList.add('on');
+  }
+});
+$('btn-reset-progress').addEventListener('click', () => {
+  if (!confirm('Reset all progress?')) return;
+  progress.currentLevel = 1;
+  progress.stars = {};
+  progress.bestScore = {};
+  progress.failCount = {};
+  saveProgress();
+  refreshHome();
+});
+
+/* Resize: re-position all tiles */
+window.addEventListener('resize', () => {
+  if (!state) return;
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      const cell = state.grid[r][c];
+      if (!cell) continue;
+      const el = tileEl.get(cell.id);
+      if (!el) continue;
+      const p = pxFor(r, c);
+      el.style.left = p.left + 'px';
+      el.style.top  = p.top  + 'px';
+      el.style.width  = p.w  + 'px';
+      el.style.height = p.h  + 'px';
+    }
+  }
+});
+
+/* Prevent accidental scroll/zoom */
+document.addEventListener('gesturestart', e => e.preventDefault());
+document.addEventListener('dblclick',     e => e.preventDefault());
+document.addEventListener('contextmenu',  e => e.preventDefault());
+
+/* ==========================================================
+   VALIDATOR — window.__validateLevels()
+   -- Dev-only sanity check. Open DevTools and run:
+        window.__validateLevels()
+      to print a table of all 30 levels.
+   -- For each level, runs 20 fresh generateBoard() trials and checks:
+        clean/20    : starts with no pre-existing 3+ match
+        solve/20    : at least ONE row/column shift produces a match
+   -- For preset levels (L1/L2/L3/L8/L16/L24), the preset is deterministic
+      so clean/solve are evaluated once and reported as 20/20 or 0/20.
+   -- Verdict:
+        PASS   if clean = 20 AND solve = 20
+        WARN   if clean = 20 but some boards aren't solvable
+        FAIL   if any board starts with a pre-existing match
+   ========================================================== */
+function __simulateShift(grid, axis, idx, shift) {
+  // Returns a shallow-cloned grid with `idx` row or column rotated by `shift`.
+  // Cells themselves are NOT cloned — we only read .color / .type from them.
+  const out = grid.map(row => row.slice());
+  if (axis === 'row') {
+    const line = out[idx];
+    const n = line.length;
+    const s = ((shift % n) + n) % n;
+    out[idx] = line.slice(n - s).concat(line.slice(0, n - s));
+  } else {
+    const n = ROWS;
+    const line = [];
+    for (let r = 0; r < n; r++) line.push(out[r][idx]);
+    const s = ((shift % n) + n) % n;
+    const rotated = line.slice(n - s).concat(line.slice(0, n - s));
+    for (let r = 0; r < n; r++) out[r][idx] = rotated[r];
+  }
+  return out;
+}
+
+function __hasAnyMatch(grid) {
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      if (hasMatchAt(grid, r, c)) return true;
+    }
+  }
+  return false;
+}
+
+function __describeTarget(targets) {
+  return targets.map(t => {
+    if (t.type === 'scripted') return 'scripted';
+    if (t.type === 'any')      return `any×${t.count}`;
+    const names = ['R','O','Y','G','B','P'];
+    return `${names[t.color]}×${t.count}`;
+  }).join(' + ');
+}
+
+window.__validateLevels = function() {
+  const rows = [];
+  for (let i = 0; i < LEVELS.length; i++) {
+    const lvl = LEVELS[i];
+    const isPreset = !!lvl.presetBoard;
+    const trials = isPreset ? 1 : 20;
+
+    let clean = 0, solvable = 0;
+    for (let k = 0; k < trials; k++) {
+      const g = generateBoard(lvl);
+
+      // Starting board must have zero 3+ clusters.
+      if (!__hasAnyMatch(g)) clean++;
+
+      // At least one row-shift or column-shift must produce a match.
+      // Try every row × (1..COLS-1) shift, then every col × (1..ROWS-1).
+      let any = false;
+      for (let r = 0; r < ROWS && !any; r++) {
+        for (let s = 1; s < COLS && !any; s++) {
+          if (__hasAnyMatch(__simulateShift(g, 'row', r, s))) any = true;
+        }
+      }
+      for (let c = 0; c < COLS && !any; c++) {
+        for (let s = 1; s < ROWS && !any; s++) {
+          if (__hasAnyMatch(__simulateShift(g, 'col', c, s))) any = true;
+        }
+      }
+      if (any) solvable++;
+    }
+
+    // For preset levels, scale the single trial up to "20" for readable output.
+    const cleanOut = isPreset ? (clean ? 20 : 0) : clean;
+    const solveOut = isPreset ? (solvable ? 20 : 0) : solvable;
+
+    let verdict;
+    if (cleanOut < 20)                    verdict = 'FAIL';
+    else if (solveOut < 20)               verdict = 'WARN';
+    else                                  verdict = 'PASS';
+
+    rows.push({
+      level:   lvl.id,
+      arc:     lvl.id <= 7 ? 1 : lvl.id <= 15 ? 2 : lvl.id <= 23 ? 3 : 4,
+      K:       lvl.colors,
+      moves:   lvl.moves,
+      stones:  lvl.stones + (lvl.stoneHp === 2 ? ' (hp2)' : ''),
+      target:  __describeTarget(lvl.targets),
+      preset:  isPreset ? '✓' : '',
+      clean:   `${cleanOut}/20`,
+      solve:   `${solveOut}/20`,
+      verdict,
+    });
+  }
+  console.table(rows);
+  const fails = rows.filter(r => r.verdict === 'FAIL').length;
+  const warns = rows.filter(r => r.verdict === 'WARN').length;
+  console.log(`%c${rows.length - fails - warns} PASS · ${warns} WARN · ${fails} FAIL`,
+    fails ? 'color:#FF4757;font-weight:bold' :
+    warns ? 'color:#FFD93D;font-weight:bold' :
+            'color:#34D399;font-weight:bold');
+  return rows;
+};
+
+/* Init */
+buildHomePreview();
+refreshHome();
+</script>
+</body>
+</html>
